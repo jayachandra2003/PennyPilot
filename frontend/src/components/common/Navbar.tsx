@@ -54,7 +54,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             {/* Desktop Navigation Links */}
             <nav
               className="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-ledger-borderSubtle"
-              role="tablist"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
@@ -63,9 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                 return (
                   <button
                     key={item.id}
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls={item.id}
+                    aria-current={isActive ? "page" : undefined}
                     onClick={() => onSelectTab(item.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                       isActive
@@ -152,7 +149,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
       {/* Mobile Bottom Navigation Bar (44px+ touch targets, pb-safe, notch support) */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-ledger-surface/95 backdrop-blur-md border-t border-ledger-border pb-safe shadow-float"
-        role="tablist"
         aria-label="Mobile Navigation"
       >
         <div className="grid grid-cols-4 h-14">
@@ -162,8 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             return (
               <button
                 key={item.id}
-                role="tab"
-                aria-selected={isActive}
+                aria-current={isActive ? "page" : undefined}
                 aria-label={item.label}
                 onClick={() => onSelectTab(item.id)}
                 className={`flex flex-col items-center justify-center gap-1 min-h-[44px] py-1 transition-colors focus-ring ${

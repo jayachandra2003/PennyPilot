@@ -6,6 +6,7 @@ import {
   getStoredToken,
   login as apiLogin,
 } from "../lib/api";
+import { isExplicitlyLoggedOut, setExplicitlyLoggedOut } from "./session";
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const u = await fetchCurrentUser();
         setUser(u);
         setToken(existing);
+        setExplicitlyLoggedOut(false);
         setIsLoading(false);
         return;
       } catch (_err) {
@@ -39,16 +41,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Auto-login with Demo account for seamless evaluator experience
-    try {
-      const auth = await apiLogin("demo@pennypilot.in", "DemoPassword123!");
-      setUser(auth.user);
-      setToken(auth.access_token);
-    } catch (_e) {
-      // Offline or server starting
+    // Do not auto-login if the user explicitly signed out
+    if (isExplicitlyLoggedOut()) {
       setUser(null);
       setToken(null);
-    } finally {
+      setIsLoading(false);
+      return;
+    }
+
+    // Auto-login with Demo account strictly in development mode for evaluator ease
+    if (import.meta.env.DEV) {
+      try {
+        const auth = await apiLogin("demo@pennypilot.in", "DemoPassword123!");
+        setUser(auth.user);
+        setToken(auth.access_token);
+      } catch (_e) {
+        // Offline or server starting
+        setUser(null);
+        setToken(null);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Production builds never automatically log in unauthenticated users
+      setUser(null);
+      setToken(null);
       setIsLoading(false);
     }
   };
@@ -63,16 +80,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const auth = await apiLogin(email, pass);
       setUser(auth.user);
       setToken(auth.access_token);
+      setExplicitlyLoggedOut(false);
     } finally {
       setIsLoading(false);
     }
   };
 
   const loginDemo = async () => {
+    setExplicitlyLoggedOut(false);
     return login("demo@pennypilot.in", "DemoPassword123!");
   };
 
   const logout = () => {
+    setExplicitlyLoggedOut(true);
     clearStoredToken();
     setUser(null);
     setToken(null);
