@@ -1,6 +1,6 @@
-"""Transaction schemas."""
+"""Transaction schemas with Natural Language Parsing & Bulk operations."""
 from datetime import date, datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.domain.currency import format_inr, paise_to_rupees
 
@@ -36,6 +36,7 @@ class TransactionResponse(TransactionBase):
 
     id: str
     user_id: str
+    category_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     amount_rupees: Optional[float] = None
@@ -46,3 +47,38 @@ class TransactionResponse(TransactionBase):
             self.amount_rupees = paise_to_rupees(self.amount_paise)
         if self.formatted_amount is None and self.amount_paise is not None:
             self.formatted_amount = format_inr(self.amount_paise)
+
+
+class NLParseRequest(BaseModel):
+    text: str = Field(min_length=2, max_length=1000)
+
+
+class ParsedDraftItem(BaseModel):
+    amount_paise: int
+    occurred_on: str
+    description: str
+    category_id: Optional[str] = None
+    category_name: str
+    kind: str = "expense"
+    source: str = "nl"
+    nl_original_text: str
+    confidence: float
+    needs_review: bool
+    amount_rupees: Optional[float] = None
+    formatted_amount: Optional[str] = None
+
+    def model_post_init(self, __context):
+        if self.amount_rupees is None:
+            self.amount_rupees = paise_to_rupees(self.amount_paise)
+        if self.formatted_amount is None:
+            self.formatted_amount = format_inr(self.amount_paise)
+
+
+class NLParseResponse(BaseModel):
+    raw_text: str
+    drafts: List[ParsedDraftItem]
+    parser_tier: str  # "rules" | "ai"
+
+
+class BulkTransactionCreate(BaseModel):
+    transactions: List[TransactionCreate] = Field(min_length=1, max_length=50)

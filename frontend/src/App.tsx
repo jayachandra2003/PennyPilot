@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import {
-  TrendingUp,
-  Receipt,
-  AlertTriangle,
-  Sparkles,
-  Server,
-  Layers,
-  Database,
-} from "lucide-react";
 import { Navbar } from "./components/common/Navbar";
 import { OfflineBanner } from "./components/common/OfflineBanner";
 import { NotFound } from "./components/common/NotFound";
-import { fetchHealth } from "./lib/api";
-import { formatINR } from "./lib/currency";
+import { ToastProvider, useToast } from "./components/common/Toast";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { VerdictStrip } from "./components/dashboard/VerdictStrip";
+import { BudgetPaceHeroChart } from "./components/dashboard/BudgetPaceHeroChart";
+import { CategoryBreakdownCard } from "./components/dashboard/CategoryBreakdownCard";
+import { RecentTransactionsCard } from "./components/dashboard/RecentTransactionsCard";
+import { InsightCards } from "./components/dashboard/InsightCards";
+import { TransactionList } from "./components/transactions/TransactionList";
+import { NLQuickAddModal } from "./components/transactions/NLQuickAddModal";
+import { BudgetManagement } from "./components/budgets/BudgetManagement";
+import {
+  fetchAnomalies,
+  fetchBudgetPace,
+  fetchCategories,
+  fetchMonthlyBudgets,
+  fetchMonthlySummary,
+  fetchTransactions,
+} from "./lib/api";
+import { Sparkles } from "lucide-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,181 +32,192 @@ const queryClient = new QueryClient({
   },
 });
 
-function MainContent() {
+function MainDashboard() {
   const [currentTab, setCurrentTab] = useState<string>("dashboard");
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedMonth, setSelectedMonth] = useState<number>(11);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
 
-  const { data: healthData, isLoading: healthLoading } = useQuery({
-    queryKey: ["systemHealth"],
-    queryFn: fetchHealth,
+  const { user, loginDemo } = useAuth();
+  const { toast } = useToast();
+
+  // Queries
+  const { data: summary, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ["monthlySummary", selectedYear, selectedMonth],
+    queryFn: () => fetchMonthlySummary(selectedYear, selectedMonth),
+    enabled: !!user,
   });
+
+  const { data: pace } = useQuery({
+    queryKey: ["budgetPace", selectedYear, selectedMonth],
+    queryFn: () => fetchBudgetPace(selectedYear, selectedMonth),
+    enabled: !!user,
+  });
+
+  const { data: transactions = [], isLoading: isTxLoading } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => fetchTransactions(),
+    enabled: !!user,
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+    enabled: !!user,
+  });
+
+  const { data: budgetsOverview, isLoading: isBudgetsLoading } = useQuery({
+    queryKey: ["budgets", selectedYear, selectedMonth],
+    queryFn: () => fetchMonthlyBudgets(selectedYear, selectedMonth),
+    enabled: !!user,
+  });
+
+  const { data: anomalyData } = useQuery({
+    queryKey: ["anomalies"],
+    queryFn: fetchAnomalies,
+    enabled: !!user,
+  });
+
+  const handleMonthChange = (year: number, month: number) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+  };
+
+  const handleTabSelect = (tab: string) => {
+    if (tab === "quick_add") {
+      setIsQuickAddOpen(true);
+    } else {
+      setCurrentTab(tab);
+    }
+  };
 
   if (currentTab === "404") {
     return <NotFound onBackToHome={() => setCurrentTab("dashboard")} />;
   }
 
+  // Filter transactions for currently selected month for the hero chart
+  const monthPrefix = `${selectedYear}-${selectedMonth.toString().padStart(2, "0")}`;
+  const monthTxs = transactions.filter((t) => t.occurred_on.startsWith(monthPrefix));
+  const totalDaysInMonth = summary?.total_days || 30;
+  const currentDay = Math.min(new Date().getDate(), totalDaysInMonth);
+
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-screen bg-ledger-bg text-ledger-ink">
       <OfflineBanner />
-      <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />
+      <Navbar currentTab={currentTab} onSelectTab={handleTabSelect} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8 pb-24 md:pb-12">
-        {/* Phase 1 Foundation Hero Banner */}
-        <section aria-labelledby="foundation-heading" className="bg-ledger-surface rounded-2xl p-6 md:p-8 border border-ledger-border shadow-card space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-ledger-border pb-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-ledger-tealLight text-ledger-teal mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Phase 1 Architecture Deployed</span>
+        {/* TAB 1: DASHBOARD */}
+        {currentTab === "dashboard" && (
+          <div className="space-y-6 md:space-y-8 animate-fade-in">
+            {/* 1. Verdict Strip (Headline & 4 Core KPIs) */}
+            {isSummaryLoading && !summary ? (
+              <div className="p-8 text-center bg-ledger-surface rounded-2xl border border-ledger-border text-ledger-inkMuted text-xs animate-pulse">
+                Loading financial overview for {selectedMonth}/{selectedYear}...
               </div>
-              <h1 id="foundation-heading" className="font-serif text-2xl md:text-4xl font-bold tracking-tight text-ledger-ink">
-                Financial Foundation & PWA Ready
-              </h1>
-              <p className="text-sm md:text-base text-ledger-inkMuted mt-1">
-                Zero-budget engineering architecture. Pure deterministic calculations with integer paise.
-              </p>
-            </div>
+            ) : (
+              <VerdictStrip
+                year={selectedYear}
+                month={selectedMonth}
+                summary={summary}
+                pace={pace}
+                onMonthChange={handleMonthChange}
+              />
+            )}
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-ledger-inkSubtle font-mono bg-ledger-bg px-3 py-1.5 rounded-lg border border-ledger-border">
-                IST: Asia/Kolkata
-              </span>
-              <button
-                onClick={() => setCurrentTab("404")}
-                className="text-xs text-ledger-inkMuted hover:text-ledger-ink underline underline-offset-4 focus-ring"
-              >
-                Test 404 Route
-              </button>
-            </div>
-          </div>
+            {/* 2. Signature "Quiet Ledger" Hero Chart */}
+            <BudgetPaceHeroChart
+              totalBudgetPaise={budgetsOverview?.total_limit_paise || 5000000}
+              totalDays={totalDaysInMonth}
+              currentDay={currentDay}
+              transactions={monthTxs}
+            />
 
-          {/* Design Direction: "Quiet Ledger" Verdict Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-ledger-bg p-5 rounded-xl border border-ledger-border space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-ledger-inkMuted">
-                <span>Month Verdict (Pace Engine)</span>
-                <TrendingUp className="w-4 h-4 text-ledger-sage" />
-              </div>
-              <div className="font-serif text-2xl md:text-3xl font-bold text-ledger-ink tabular-nums">
-                {formatINR(3425000)}
-              </div>
-              <p className="text-xs text-ledger-sage font-medium flex items-center gap-1">
-                <span>On track to save {formatINR(1575000)} by month-end.</span>
-              </p>
-            </div>
+            {/* 3. Grounded Insight Cards (Pace, Anomaly, Savings) */}
+            <InsightCards
+              pace={pace}
+              anomalies={anomalyData?.anomalies || []}
+              summary={summary}
+              onNavigateToBudgets={() => setCurrentTab("budgets")}
+              onNavigateToTransactions={() => setCurrentTab("transactions")}
+            />
 
-            <div className="bg-ledger-bg p-5 rounded-xl border border-ledger-border space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-ledger-inkMuted">
-                <span>Monthly Budget (Paise Model)</span>
-                <Receipt className="w-4 h-4 text-ledger-teal" />
-              </div>
-              <div className="font-serif text-2xl md:text-3xl font-bold text-ledger-ink tabular-nums">
-                {formatINR(5000000)}
-              </div>
-              <div className="w-full bg-ledger-border h-2 rounded-full overflow-hidden">
-                <div className="bg-ledger-teal h-full w-[68.5%]" />
-              </div>
-              <p className="text-xs text-ledger-inkMuted tabular-nums">68.5% utilized • 12 days remaining</p>
-            </div>
-
-            <div className="bg-ledger-bg p-5 rounded-xl border border-ledger-border space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-ledger-inkMuted">
-                <span>Anomaly Detection (MAD Engine)</span>
-                <AlertTriangle className="w-4 h-4 text-ledger-amber" />
-              </div>
-              <div className="font-serif text-2xl md:text-3xl font-bold text-ledger-ink tabular-nums">
-                1 Flagged
-              </div>
-              <p className="text-xs text-ledger-inkMuted">
-                ₹4,500 Dining expense flagged as 3.6x above median baseline.
-              </p>
+            {/* 4. Two-Column Grid: Category Breakdown + Recent Transactions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CategoryBreakdownCard
+                categories={summary?.category_breakdown || []}
+                totalExpensePaise={summary?.expense_paise || 0}
+              />
+              <RecentTransactionsCard
+                transactions={transactions}
+                onViewAll={() => setCurrentTab("transactions")}
+                onQuickAdd={() => setIsQuickAddOpen(true)}
+              />
             </div>
           </div>
-        </section>
+        )}
 
-        {/* Live Backend & AI Tier Connectivity Matrix */}
-        <section aria-labelledby="status-heading" className="bg-ledger-surface rounded-2xl p-6 md:p-8 border border-ledger-border shadow-card space-y-5">
-          <div className="flex items-center gap-2">
-            <Server className="w-5 h-5 text-ledger-teal" />
-            <h2 id="status-heading" className="font-serif text-xl font-bold text-ledger-ink">
-              System Health & Fallback Architecture Status
+        {/* TAB 2: TRANSACTIONS LEDGER */}
+        {currentTab === "transactions" && (
+          <div className="animate-fade-in">
+            <TransactionList
+              transactions={transactions}
+              categories={categories}
+              onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+              isLoading={isTxLoading}
+            />
+          </div>
+        )}
+
+        {/* TAB 3: BUDGET MANAGEMENT */}
+        {currentTab === "budgets" && (
+          <div className="animate-fade-in">
+            <BudgetManagement
+              year={selectedYear}
+              month={selectedMonth}
+              overview={budgetsOverview}
+              onMonthChange={handleMonthChange}
+              isLoading={isBudgetsLoading}
+            />
+          </div>
+        )}
+
+        {/* TAB 4: COPILOT ARCHITECTURE PREVIEW */}
+        {currentTab === "copilot" && (
+          <div className="bg-ledger-surface p-8 rounded-2xl border border-ledger-border shadow-card space-y-4 animate-fade-in text-center max-w-xl mx-auto py-12">
+            <div className="w-14 h-14 rounded-2xl bg-ledger-tealLight text-ledger-teal flex items-center justify-center mx-auto">
+              <Sparkles className="w-7 h-7" />
+            </div>
+            <h2 className="font-serif text-2xl font-bold text-ledger-ink">
+              Grounded Financial Copilot Architecture
             </h2>
+            <p className="text-xs md:text-sm text-ledger-inkMuted leading-relaxed">
+              Designed with the <strong>Compute-Then-Explain</strong> constitution. The Copilot router maps natural language questions to fixed backend query tools (Fact Bundles). Zero free-form SQL, zero fabricated calculations.
+            </p>
+            <div className="p-4 rounded-xl bg-ledger-bg border border-ledger-border text-left space-y-2 text-xs">
+              <div className="font-semibold text-ledger-teal">Verified AI Safeguards:</div>
+              <ul className="list-disc pl-4 space-y-1 text-ledger-inkMuted">
+                <li>Numeric Validator regex-checks every number against the Fact Bundle.</li>
+                <li>3-Tier Fallback: Hosted Gemini/Groq → Local Ollama Qwen 2.5:3B → Deterministic Rules.</li>
+                <li>Evidence panels accompany every narration.</li>
+              </ul>
+            </div>
+            <p className="text-xs text-ledger-inkSubtle">
+              Scheduled for Phase 3 full interactive rollout.
+            </p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border border-ledger-border bg-ledger-bg/70 space-y-1.5">
-              <div className="text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider">FastAPI Backend</div>
-              <div className="text-sm font-semibold text-ledger-ink flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${healthData?.status === "healthy" ? "bg-ledger-sage" : "bg-ledger-amber"}`} />
-                <span>{healthLoading ? "Checking..." : healthData?.status === "healthy" ? "Operational (v0.1.0)" : "Connecting..."}</span>
-              </div>
-              <p className="text-[11px] text-ledger-inkSubtle">Port 8000 • Async Uvicorn</p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-ledger-border bg-ledger-bg/70 space-y-1.5">
-              <div className="text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider">Database Engine</div>
-              <div className="text-sm font-semibold text-ledger-ink flex items-center gap-2">
-                <Database className="w-3.5 h-3.5 text-ledger-teal" />
-                <span>SQLite (WAL Mode)</span>
-              </div>
-              <p className="text-[11px] text-ledger-inkSubtle">Zero background RAM • Multi-tenant UUIDs</p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-ledger-border bg-ledger-bg/70 space-y-1.5">
-              <div className="text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider">Local Ollama AI</div>
-              <div className="text-sm font-semibold text-ledger-ink flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-ledger-teal" />
-                <span>Qwen 2.5:3B</span>
-              </div>
-              <p className="text-[11px] text-ledger-inkSubtle">16.5 t/s benchmarked • Offline capable</p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-ledger-border bg-ledger-bg/70 space-y-1.5">
-              <div className="text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider">Cross-Platform PWA</div>
-              <div className="text-sm font-semibold text-ledger-ink flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-ledger-sage" />
-                <span>App Shell Cached</span>
-              </div>
-              <p className="text-[11px] text-ledger-inkSubtle">Manifest registered • Installable</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Phase 1 Verification Checklist */}
-        <section aria-labelledby="verification-heading" className="bg-ledger-surface rounded-2xl p-6 md:p-8 border border-ledger-border shadow-card space-y-4">
-          <h2 id="verification-heading" className="font-serif text-xl font-bold text-ledger-ink">
-            Production & Security Checklist (Valarabulities Audit)
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-ledger-inkMuted">
-            <div className="flex items-start gap-2.5">
-              <span className="w-4 h-4 rounded-full bg-ledger-sageLight text-ledger-sage flex items-center justify-center font-bold text-[10px] mt-0.5">✓</span>
-              <span><strong>Integer Paise Math:</strong> All currency stored as integer paise. Floating-point rounding errors eliminated.</span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-4 h-4 rounded-full bg-ledger-sageLight text-ledger-sage flex items-center justify-center font-bold text-[10px] mt-0.5">✓</span>
-              <span><strong>No Exposed Secrets:</strong> Zero hardcoded keys; <code>.env</code> strictly gitignored with <code>.env.example</code> template.</span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-4 h-4 rounded-full bg-ledger-sageLight text-ledger-sage flex items-center justify-center font-bold text-[10px] mt-0.5">✓</span>
-              <span><strong>Safe PWA Shell:</strong> Service worker excludes <code>/api/*</code> to prevent caching sensitive financial records.</span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-4 h-4 rounded-full bg-ledger-sageLight text-ledger-sage flex items-center justify-center font-bold text-[10px] mt-0.5">✓</span>
-              <span><strong>Server-Side Isolation:</strong> Every repository query requires <code>user_id</code>. Verified via Pytest cross-user isolation tests.</span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-4 h-4 rounded-full bg-ledger-sageLight text-ledger-sage flex items-center justify-center font-bold text-[10px] mt-0.5">✓</span>
-              <span><strong>Zero Horizontal Scroll:</strong> Tested for mobile (375px), tablet, and desktop viewports with 44px+ touch targets.</span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-4 h-4 rounded-full bg-ledger-sageLight text-ledger-sage flex items-center justify-center font-bold text-[10px] mt-0.5">✓</span>
-              <span><strong>Strict ₹0 Budget:</strong> Pure open-source stack (FastAPI, SQLite, React, Tailwind, Ollama) requiring zero credit cards.</span>
-            </div>
-          </div>
-        </section>
+        )}
       </main>
 
-      {/* Production Footer (satisfies Checklist items #9, #15, #16) */}
-      <footer className="border-t border-ledger-border bg-ledger-surface py-6 px-4 lg:px-8 text-xs text-ledger-inkSubtle">
+      {/* Global Natural Language Quick-Add Modal */}
+      <NLQuickAddModal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        categories={categories}
+      />
+
+      {/* Production Footer */}
+      <footer className="border-t border-ledger-border bg-ledger-surface py-6 px-4 lg:px-8 text-xs text-ledger-inkSubtle mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 PennyPilot. Engineered for NIVUNA Labs Assignment. Strict ₹0 budget.</p>
           <div className="flex items-center gap-4">
@@ -207,6 +226,13 @@ function MainContent() {
             <span className="hover:text-ledger-ink cursor-pointer">Terms of Service</span>
             <span>•</span>
             <span className="hover:text-ledger-ink cursor-pointer">Security Standards</span>
+            <span>•</span>
+            <button
+              onClick={() => loginDemo().then(() => toast("Switched to Demo Account", "info"))}
+              className="text-ledger-teal hover:underline font-medium"
+            >
+              Reset Demo User
+            </button>
           </div>
         </div>
       </footer>
@@ -217,7 +243,11 @@ function MainContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <MainContent />
+      <AuthProvider>
+        <ToastProvider>
+          <MainDashboard />
+        </ToastProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
