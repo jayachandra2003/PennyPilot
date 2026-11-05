@@ -103,10 +103,23 @@ function MainDashboard() {
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-ledger-bg text-ledger-ink">
+      {/* Accessible Skip to Content Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3 focus:py-2 focus:bg-ledger-teal focus:text-white focus:rounded-md focus:shadow-float focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ledger-teal text-xs font-medium"
+      >
+        Skip to main content
+      </a>
+
       <OfflineBanner />
       <Navbar currentTab={currentTab} onSelectTab={handleTabSelect} />
 
-      <main className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-6 space-y-5 md:space-y-6 pb-20 md:pb-10">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-6 space-y-5 md:space-y-6 pb-28 md:pb-10 focus:outline-none"
+        aria-label="Main financial ledger content"
+      >
         {/* TAB 1: DASHBOARD */}
         {currentTab === "dashboard" && (
           <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -199,7 +212,7 @@ function MainDashboard() {
 
       {/* Production Footer */}
       <footer className="border-t border-ledger-border bg-ledger-surface py-6 px-4 lg:px-8 text-xs text-ledger-inkSubtle mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-ledger mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 PennyPilot. Engineered for NIVUNA Labs Assignment. Strict ₹0 budget.</p>
           <div className="flex items-center gap-4">
             <span className="hover:text-ledger-ink cursor-pointer">Privacy Policy</span>
