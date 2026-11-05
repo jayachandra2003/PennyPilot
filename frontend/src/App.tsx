@@ -13,6 +13,7 @@ import { InsightCards } from "./components/dashboard/InsightCards";
 import { TransactionList } from "./components/transactions/TransactionList";
 import { NLQuickAddModal } from "./components/transactions/NLQuickAddModal";
 import { BudgetManagement } from "./components/budgets/BudgetManagement";
+import { CopilotView } from "./components/copilot/CopilotView";
 import {
   fetchAnomalies,
   fetchBudgetPace,
@@ -21,7 +22,6 @@ import {
   fetchMonthlySummary,
   fetchTransactions,
 } from "./lib/api";
-import { Sparkles } from "lucide-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -182,29 +182,10 @@ function MainDashboard() {
           </div>
         )}
 
-        {/* TAB 4: COPILOT ARCHITECTURE PREVIEW */}
+        {/* TAB 4: GROUNDED AI COPILOT */}
         {currentTab === "copilot" && (
-          <div className="bg-ledger-surface p-8 rounded-2xl border border-ledger-border shadow-card space-y-4 animate-fade-in text-center max-w-xl mx-auto py-12">
-            <div className="w-14 h-14 rounded-2xl bg-ledger-tealLight text-ledger-teal flex items-center justify-center mx-auto">
-              <Sparkles className="w-7 h-7" />
-            </div>
-            <h2 className="font-serif text-2xl font-bold text-ledger-ink">
-              Grounded Financial Copilot Architecture
-            </h2>
-            <p className="text-xs md:text-sm text-ledger-inkMuted leading-relaxed">
-              Designed with the <strong>Compute-Then-Explain</strong> constitution. The Copilot router maps natural language questions to fixed backend query tools (Fact Bundles). Zero free-form SQL, zero fabricated calculations.
-            </p>
-            <div className="p-4 rounded-xl bg-ledger-bg border border-ledger-border text-left space-y-2 text-xs">
-              <div className="font-semibold text-ledger-teal">Verified AI Safeguards:</div>
-              <ul className="list-disc pl-4 space-y-1 text-ledger-inkMuted">
-                <li>Numeric Validator regex-checks every number against the Fact Bundle.</li>
-                <li>3-Tier Fallback: Hosted Gemini/Groq → Local Ollama Qwen 2.5:3B → Deterministic Rules.</li>
-                <li>Evidence panels accompany every narration.</li>
-              </ul>
-            </div>
-            <p className="text-xs text-ledger-inkSubtle">
-              Scheduled for Phase 3 full interactive rollout.
-            </p>
+          <div className="animate-fade-in">
+            <CopilotView year={selectedYear} month={selectedMonth} />
           </div>
         )}
       </main>

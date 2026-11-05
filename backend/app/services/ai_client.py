@@ -5,11 +5,13 @@ Chain Priority:
 2. Local Ollama (Qwen 2.5:3B on localhost:11434)
 3. Deterministic Python Fallback
 """
+import json
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 import httpx
 from app.core.config import settings
 from app.core.logging import logger
+from app.domain.copilot import DeterministicNarrativeGenerator, FactBundleVerifier
 
 
 class BaseLLMClient(ABC):
@@ -20,6 +22,11 @@ class BaseLLMClient(ABC):
         """Generate a response text from prompt. Returns None on failure."""
         pass
 
+    @abstractmethod
+    async def is_available(self) -> bool:
+        """Check if provider is online and ready."""
+        pass
+
 
 class OllamaClient(BaseLLMClient):
     """Tier 2: Local Ollama instance using existing Qwen 2.5:3B model."""
@@ -28,17 +35,32 @@ class OllamaClient(BaseLLMClient):
         self.base_url = base_url.rstrip("/")
         self.model = model
 
+    async def is_available(self) -> bool:
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                res = await client.get(f"{self.base_url}/api/tags")
+                if res.status_code == 200:
+                    models = [m.get("name", "") for m in res.json().get("models", [])]
+                    return any(self.model in m for m in models)
+        except Exception:
+            pass
+        return False
+
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Optional[str]:
         payload: Dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
             "stream": False,
+            "options": {
+                "temperature": 0.2,  # Low temperature for factual precision
+                "top_p": 0.9,
+            },
         }
         if system_prompt:
             payload["system"] = system_prompt
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=12.0) as client:
                 res = await client.post(f"{self.base_url}/api/generate", json=payload)
                 if res.status_code == 200:
                     data = res.json()
@@ -55,6 +77,9 @@ class GeminiClient(BaseLLMClient):
     def __init__(self, api_key: str = settings.GEMINI_API_KEY):
         self.api_key = api_key
 
+    async def is_available(self) -> bool:
+        return bool(self.api_key and len(self.api_key) > 10)
+
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Optional[str]:
         if not self.api_key:
             return None
@@ -64,7 +89,10 @@ class GeminiClient(BaseLLMClient):
         if system_prompt:
             parts.insert(0, {"text": f"SYSTEM: {system_prompt}\n\nUSER:"})
 
-        payload = {"contents": [{"parts": parts}]}
+        payload = {
+            "contents": [{"parts": parts}],
+            "generationConfig": {"temperature": 0.2},
+        }
 
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
@@ -84,6 +112,9 @@ class GeminiClient(BaseLLMClient):
 class DeterministicFallbackClient(BaseLLMClient):
     """Tier 3: Guaranteed zero-failure rule and template fallback."""
 
+    async def is_available(self) -> bool:
+        return True
+
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         return "[Rule Engine Fallback] Deterministic calculation verified. AI offline mode active."
 
@@ -96,24 +127,121 @@ class AIOrchestrator:
         self.tier2_local = OllamaClient()
         self.tier3_fallback = DeterministicFallbackClient()
 
-    async def query(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
-        # 1. Try Hosted Free Tier
+    async def get_provider_status(self) -> Dict[str, Any]:
+        """Check live availability of all inference providers."""
+        gemini_ready = await self.tier1_hosted.is_available() if self.tier1_hosted else False
+        ollama_ready = await self.tier2_local.is_available()
+
+        if gemini_ready:
+            active = "gemini"
+            tier = 1
+            display = "Gemini Free Tier (Hosted)"
+        elif ollama_ready:
+            active = "ollama"
+            tier = 2
+            display = "Ollama Qwen 2.5:3B (Local)"
+        else:
+            active = "deterministic"
+            tier = 3
+            display = "Deterministic Python Engine"
+
+        return {
+            "active_provider": active,
+            "active_tier": tier,
+            "display_name": display,
+            "providers": {
+                "gemini_hosted": {"available": gemini_ready, "tier": 1},
+                "ollama_local": {"available": ollama_ready, "tier": 2, "model": settings.OLLAMA_MODEL},
+                "deterministic_engine": {"available": True, "tier": 3},
+            },
+        }
+
+    async def generate_grounded_answer(
+        self,
+        question: str,
+        facts: Dict[str, Any],
+        intent: str,
+        target_cat: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Produce a grounded answer supported by verified FactBundle.
+        Guarantees fallback to DeterministicNarrativeGenerator if AI fails or hallucinates.
+        """
+        # 1. Precompute guaranteed rule-based answer
+        deterministic_answer = DeterministicNarrativeGenerator.generate(
+            intent=intent,
+            target_cat=target_cat,
+            facts=facts,
+        )
+
+        # 2. Build strict grounding prompt for LLMs
+        system_prompt = (
+            "You are PennyPilot's Senior Financial Intelligence Analyst. "
+            "Your highest directive is: Compute, Then Explain (Zero Financial Hallucination). "
+            "You are provided with a verified Fact Bundle containing exact ledger figures. "
+            "STRICT RULES:\n"
+            "1. ONLY state facts and numbers that appear in the Fact Bundle.\n"
+            "2. NEVER invent, calculate, or extrapolate unverified totals.\n"
+            "3. Format currency with Indian Rupee symbol (e.g., ₹12,500.00) in bold.\n"
+            "4. Keep your answer concise (2-4 sentences), professional, empathetic, and actionable.\n"
+            "5. Do NOT provide speculative investment advice."
+        )
+
+        # Compact facts payload for token efficiency
+        context_payload = {
+            "period": f"{facts['period']['year']}-{facts['period']['month']:02d}",
+            "totals": facts["totals"],
+            "top_category": facts["top_category"],
+            "budget_pace": {
+                "status": facts["budget_pace"]["status"],
+                "spent": facts["budget_pace"]["spent_formatted"],
+                "limit": facts["budget_pace"]["limit_formatted"],
+                "projected_overrun": facts["budget_pace"]["projected_overrun_formatted"],
+            },
+            "top_anomalies": [
+                {"desc": a["description"], "amount": a["amount_formatted"], "evidence": a["evidence"]}
+                for a in facts.get("anomalies", [])[:2]
+            ],
+            "mom_delta": {
+                "expense_delta": facts["mom_delta"]["expense_delta_formatted"],
+                "pct_change": facts["mom_delta"]["expense_pct_change"],
+            },
+        }
+
+        user_prompt = (
+            f"User Question: \"{question}\"\n"
+            f"Detected Intent: {intent}\n\n"
+            f"Verified Fact Bundle:\n{json.dumps(context_payload, indent=2)}\n\n"
+            f"Answer the user's question directly using ONLY the facts above."
+        )
+
+        # 3. Attempt Tier 1 (Hosted Free)
         if self.tier1_hosted:
-            logger.info("Attempting Tier 1 (Hosted Free AI)...")
-            res = await self.tier1_hosted.generate(prompt, system_prompt)
-            if res:
-                return {"provider": "gemini", "tier": 1, "text": res}
+            try:
+                ai_text = await self.tier1_hosted.generate(user_prompt, system_prompt)
+                if ai_text:
+                    sanitized, is_valid = FactBundleVerifier.verify(ai_text, facts)
+                    if is_valid:
+                        return {"answer": sanitized, "provider": "gemini", "tier": 1}
+            except Exception as e:
+                logger.warning(f"Tier 1 error: {e}")
 
-        # 2. Try Local Ollama
-        logger.info("Attempting Tier 2 (Local Ollama Qwen 2.5:3B)...")
-        res = await self.tier2_local.generate(prompt, system_prompt)
-        if res:
-            return {"provider": "ollama", "tier": 2, "text": res}
+        # 4. Attempt Tier 2 (Local Ollama Qwen 2.5:3B)
+        try:
+            ai_text = await self.tier2_local.generate(user_prompt, system_prompt)
+            if ai_text:
+                sanitized, is_valid = FactBundleVerifier.verify(ai_text, facts)
+                if is_valid:
+                    return {"answer": sanitized, "provider": "ollama", "tier": 2}
+        except Exception as e:
+            logger.warning(f"Tier 2 error: {e}")
 
-        # 3. Deterministic Fallback
-        logger.info("Engaging Tier 3 (Deterministic Fallback Engine)...")
-        res = await self.tier3_fallback.generate(prompt, system_prompt)
-        return {"provider": "deterministic", "tier": 3, "text": res}
+        # 5. Fallback to Tier 3 (Deterministic Engine)
+        return {
+            "answer": deterministic_answer,
+            "provider": "deterministic",
+            "tier": 3,
+        }
 
 
 ai_service = AIOrchestrator()
