@@ -26,8 +26,10 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
       ? "bg-emerald-100 text-emerald-800 border-emerald-300"
       : report?.health_status === "Healthy"
       ? "bg-ledger-tealLight text-ledger-teal border-ledger-teal/30"
-      : report?.health_status === "Moderate"
+      : report?.health_status === "Pacing Alert" || report?.health_status === "At Risk"
       ? "bg-amber-100 text-amber-800 border-amber-300"
+      : report?.health_status === "Moderate"
+      ? "bg-blue-100 text-blue-800 border-blue-300"
       : "bg-red-100 text-red-800 border-red-300";
 
   return (

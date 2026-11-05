@@ -182,24 +182,113 @@ def test_token_bucket_rate_limiter():
 def test_fact_bundle_verifier():
     facts = {
         "totals": {
+            "income_paise": 8500000,
             "income_formatted": "₹85,000.00",
+            "expense_paise": 2903000,
             "expense_formatted": "₹29,030.00",
             "net_balance_formatted": "+₹55,970.00",
+            "savings_rate_percent": 65.85,
+            "transaction_count": 19,
         },
         "categories": [
-            {"formatted_total": "₹18,500.00"}
+            {
+                "category_id": "cat_rent",
+                "category_name": "Housing & Rent",
+                "formatted_total": "₹18,500.00",
+                "total_paise": 1850000,
+                "percentage": 63.73,  # 63.73% of EXPENSE
+                "transaction_count": 1,
+            }
         ],
         "top_expenses": [],
         "anomalies": [],
-        "budget_pace": {},
+        "budget_pace": {
+            "spent_formatted": "₹29,030.00",
+            "limit_formatted": "₹55,000.00",
+            "utilization_percent": 52.78,
+        },
+        "mom_delta": {
+            "expense_pct_change": 18.6,
+        },
     }
 
-    # Grounded text using valid numbers
-    grounded_text = "You spent ₹29,030.00 this month, retaining a net balance of +₹55,970.00."
+    # 1. Valid grounded text
+    grounded_text = "You spent ₹29,030.00 this month, retaining a net balance of +₹55,970.00 with a 65.85% savings rate across 19 transactions."
     _, is_grounded = FactBundleVerifier.verify(grounded_text, facts)
     assert is_grounded is True
 
-    # Hallucinated text with made-up numbers
-    hallucinated_text = "You spent ₹99,999.00 this month."
-    _, is_grounded_bad = FactBundleVerifier.verify(hallucinated_text, facts)
-    assert is_grounded_bad is False
+    # 2. Unsupported currency value (Hallucination)
+    hallucinated_curr = "You spent ₹99,999.00 this month."
+    _, is_curr_valid = FactBundleVerifier.verify(hallucinated_curr, facts)
+    assert is_curr_valid is False
+
+    # 3. Unsupported percentage (Hallucinated metric)
+    hallucinated_pct = "Your spending velocity increased by 43.69% this month."
+    _, is_pct_valid = FactBundleVerifier.verify(hallucinated_pct, facts)
+    assert is_pct_valid is False
+
+    # 4. Semantic Contradiction: Claiming 63.73% of INCOME when it was 63.73% of EXPENSES
+    # Note: 18500/85000 is 21.8% of income, NOT 63.73%
+    contradictory_text = "Housing & Rent consumes 63.73% of your total income."
+    _, is_contradiction_valid = FactBundleVerifier.verify(contradictory_text, facts)
+    assert is_contradiction_valid is False
+
+    # 5. Incorrect transaction count
+    incorrect_count_text = "Housing & Rent accounted for ₹18,500.00 across 14 transactions."
+    _, is_count_valid = FactBundleVerifier.verify(incorrect_count_text, facts)
+    assert is_count_valid is False
+
+
+def test_financial_health_classification():
+    from app.domain.narrative import classify_financial_health
+
+    # 1. High savings rate (65.85%) but OVER PACE -> MUST NOT be Exceptional, must be Pacing Alert
+    status1, tone1 = classify_financial_health(
+        savings_rate_percent=65.85,
+        net_balance_paise=5597000,
+        pace_status="over_pace",
+        is_over_budget=False,
+        projected_overrun_formatted="₹90,150.00",
+    )
+    assert status1 == "Pacing Alert"
+    assert "overrun of ₹90,150.00" in tone1
+
+    # 2. Deficit / Negative Cash Flow
+    status2, _ = classify_financial_health(
+        savings_rate_percent=0.0,
+        net_balance_paise=-500000,
+        pace_status="over_budget",
+        is_over_budget=True,
+        projected_overrun_formatted="₹5,000.00",
+    )
+    assert status2 == "Deficit"
+
+    # 3. Over Budget ceiling breached
+    status3, _ = classify_financial_health(
+        savings_rate_percent=10.0,
+        net_balance_paise=200000,
+        pace_status="over_budget",
+        is_over_budget=True,
+        projected_overrun_formatted="₹10,000.00",
+    )
+    assert status3 == "Over Budget"
+
+    # 4. Truly Exceptional: High savings (45%) AND strictly on_track
+    status4, _ = classify_financial_health(
+        savings_rate_percent=45.0,
+        net_balance_paise=3500000,
+        pace_status="on_track",
+        is_over_budget=False,
+        projected_overrun_formatted="₹0.00",
+    )
+    assert status4 == "Exceptional"
+
+    # 5. Healthy: Good savings (25%) AND on_track
+    status5, _ = classify_financial_health(
+        savings_rate_percent=25.0,
+        net_balance_paise=2000000,
+        pace_status="on_track",
+        is_over_budget=False,
+        projected_overrun_formatted="₹0.00",
+    )
+    assert status5 == "Healthy"

@@ -108,11 +108,20 @@ async def http_exception_handler(
         429: "RATE_LIMIT_EXCEEDED",
     }
     code = code_map.get(exc.status_code, "HTTP_ERROR")
+    headers = getattr(exc, "headers", None)
+    
+    # If detail is dict, format cleanly
+    msg = exc.detail
+    if isinstance(exc.detail, dict) and "error" in exc.detail:
+        msg = exc.detail["error"].get("message", str(exc.detail))
+        code = exc.detail["error"].get("code", code)
+
     return JSONResponse(
         status_code=exc.status_code,
-        content=ErrorResponse(code=code, message=str(exc.detail)).model_dump(
+        content=ErrorResponse(code=code, message=str(msg)).model_dump(
             exclude_none=True
         ),
+        headers=headers,
     )
 
 

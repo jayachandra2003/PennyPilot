@@ -144,6 +144,18 @@ class FactBundleBuilder:
                 "diff_formatted": ("+" if diff_paise >= 0 else "-") + format_inr(abs(diff_paise)),
             })
         cat_shifts.sort(key=lambda x: x["diff_paise"], reverse=True)
+        increase_drivers = [s for s in cat_shifts if s["diff_paise"] > 0]
+        unchanged_categories = [s for s in cat_shifts if s["diff_paise"] == 0 and s["current_paise"] > 0]
+        decrease_drivers = [s for s in cat_shifts if s["diff_paise"] < 0]
+
+        # Find specific transactions in increasing categories that explain the rise
+        increasing_cat_names = {s["category_name"] for s in increase_drivers}
+        explaining_txs = [
+            t for t in curr_tx_dicts
+            if t["kind"] == "expense" and t["category_name"] in increasing_cat_names and t["amount_paise"] >= 100000
+        ]
+        for t in explaining_txs:
+            t["formatted_amount"] = format_inr(t["amount_paise"])
 
         # 4. Budget Pace
         budgets = (
@@ -223,6 +235,10 @@ class FactBundleBuilder:
                 "income_delta_paise": income_delta_paise,
                 "income_delta_formatted": ("+" if income_delta_paise >= 0 else "-") + format_inr(abs(income_delta_paise)),
                 "category_shifts": cat_shifts[:5],
+                "increase_drivers": increase_drivers,
+                "unchanged_categories": unchanged_categories,
+                "decrease_drivers": decrease_drivers,
+                "explaining_transactions": explaining_txs,
             },
             "categories": curr_categories,
             "top_category": curr_categories[0] if curr_categories else None,
@@ -327,7 +343,7 @@ class DeterministicNarrativeGenerator:
                     f"Your expenses increased by **{diff_fmt}** (+{pct}%) compared to last month "
                     f"({totals['expense_formatted']} vs. {prev['expense_formatted']}).\n\n"
                 )
-                shifts = [s for s in mom["category_shifts"] if s["diff_paise"] > 0]
+                shifts = mom.get("increase_drivers") or [s for s in mom.get("category_shifts", []) if s.get("diff_paise", 0) > 0]
                 if shifts:
                     top_shift = shifts[0]
                     explanation += (
@@ -339,10 +355,20 @@ class DeterministicNarrativeGenerator:
                     explanation += (
                         f"Additionally, **{second_shift['category_name']}** increased by **{second_shift['diff_formatted']}**. "
                     )
-                if anomalies:
+                
+                explaining_txs = mom.get("explaining_transactions", [])
+                if explaining_txs:
+                    top_tx = explaining_txs[0]
                     explanation += (
-                        f"\n\nThere were **{len(anomalies)} statistical spending anomaly spikes** recorded this month, "
-                        f"including **{anomalies[0]['description']}** for **{anomalies[0]['amount_formatted']}**."
+                        f"\nA key transaction driving this increase was **{top_tx['description']}** ({top_tx['formatted_amount']}) in {top_tx['category_name']}."
+                    )
+
+                unchanged = mom.get("unchanged_categories", [])
+                if unchanged:
+                    top_unchanged = unchanged[0]
+                    explanation += (
+                        f"\n\n*(Note: Fixed recurring expenses like **{top_unchanged['category_name']}** remained constant at "
+                        f"{format_inr(top_unchanged['current_paise'])} in both months and did not contribute to this increase.)*"
                     )
                 return explanation
             else:
@@ -469,54 +495,127 @@ class DeterministicNarrativeGenerator:
 
 
 class FactBundleVerifier:
-    """Cross-validates AI narratives against verified FactBundle to eliminate hallucinations."""
+    """
+    Multi-rule verification engine that validates:
+    1. Currency amounts: every currency token must match verified figures in FactBundle.
+    2. Percentages: every X% must match verified ratios or standard advisory benchmarks.
+    3. Semantic attribution: X% of income vs X% of expenses must match the true denominator.
+    4. Transaction counts: 'N transactions' claims must match actual counts.
+    5. Rejection guarantee: returns (narrative, False) to trigger safe deterministic fallback.
+    """
 
     @staticmethod
     def verify(narrative: str, facts: Dict[str, Any]) -> Tuple[str, bool]:
-        """
-        Verify that narrative does not contain contradicted rupee amounts.
-        Returns:
-            (sanitized_text: str, is_strictly_grounded: bool)
-        """
-        # Look for rupee mentions like ₹12,345.00 or Rs. 12345
-        pattern = re.compile(r"(?:₹|Rs\.?)\s*([\d,]+(?:\.\d{2})?)", re.IGNORECASE)
-        found_amounts = pattern.findall(narrative)
+        if not narrative or not narrative.strip():
+            return narrative, False
 
+        # -------------------------------------------------------------
+        # 1. CURRENCY AMOUNT VALIDATION
+        # -------------------------------------------------------------
         valid_amounts = set()
-        # Collect all valid formatted strings and numerical values
         for key in ["income_formatted", "expense_formatted", "net_balance_formatted"]:
             val = facts["totals"].get(key, "")
             cleaned = re.sub(r"[^\d.]", "", val)
             if cleaned:
                 valid_amounts.add(cleaned)
+                valid_amounts.add(cleaned.split(".")[0])
 
         for c in facts.get("categories", []):
             cleaned = re.sub(r"[^\d.]", "", c.get("formatted_total", ""))
             if cleaned:
                 valid_amounts.add(cleaned)
+                valid_amounts.add(cleaned.split(".")[0])
 
         for a in facts.get("anomalies", []):
             cleaned = re.sub(r"[^\d.]", "", a.get("amount_formatted", ""))
             if cleaned:
                 valid_amounts.add(cleaned)
+                valid_amounts.add(cleaned.split(".")[0])
 
         for t in facts.get("top_expenses", []):
             cleaned = re.sub(r"[^\d.]", "", t.get("formatted_amount", ""))
             if cleaned:
                 valid_amounts.add(cleaned)
+                valid_amounts.add(cleaned.split(".")[0])
 
         pace = facts.get("budget_pace", {})
-        for p_key in ["spent_formatted", "limit_formatted", "projected_overrun_formatted"]:
+        for p_key in ["spent_formatted", "limit_formatted", "projected_overrun_formatted", "remaining_formatted"]:
             cleaned = re.sub(r"[^\d.]", "", pace.get(p_key, ""))
             if cleaned:
                 valid_amounts.add(cleaned)
+                valid_amounts.add(cleaned.split(".")[0])
 
-        # Check found amounts
+        mom = facts.get("mom_delta", {})
+        for m_key in ["expense_delta_formatted", "income_delta_formatted"]:
+            cleaned = re.sub(r"[^\d.]", "", mom.get(m_key, ""))
+            if cleaned:
+                valid_amounts.add(cleaned)
+                valid_amounts.add(cleaned.split(".")[0])
+
+        pattern = re.compile(r"(?:₹|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE)
+        found_amounts = pattern.findall(narrative)
         for raw in found_amounts:
             c = raw.replace(",", "")
-            # If not in valid set and length > 2 digits, flag potential discrepancy
             if len(c) > 2 and c not in valid_amounts and not any(c in v for v in valid_amounts):
-                # An unrecognized number was found
+                return narrative, False
+
+        # -------------------------------------------------------------
+        # 2. PERCENTAGE VALIDATION
+        # -------------------------------------------------------------
+        valid_percentages = {
+            round(float(facts["totals"].get("savings_rate_percent", 0.0)), 1),
+            round(float(pace.get("utilization_percent", 0.0)), 1),
+            round(float(mom.get("expense_pct_change", 0.0)), 1),
+            10.0, 15.0, 20.0, 25.0, 30.0, 50.0,
+        }
+        income_paise = facts["totals"].get("income_paise", 0)
+        expense_category_pcts = set()
+        income_share_pcts = set()
+
+        for c in facts.get("categories", []):
+            pct = round(float(c.get("percentage", 0.0)), 1)
+            valid_percentages.add(pct)
+            expense_category_pcts.add(pct)
+            if income_paise > 0:
+                inc_pct = round((c.get("total_paise", 0) / income_paise) * 100.0, 1)
+                valid_percentages.add(inc_pct)
+                income_share_pcts.add(inc_pct)
+
+        pct_pattern = re.compile(r"(\d+(?:\.\d+)?)\s*%")
+        found_pcts = pct_pattern.findall(narrative)
+        for raw_pct in found_pcts:
+            p_float = round(float(raw_pct), 1)
+            if not any(abs(p_float - v) <= 0.6 for v in valid_percentages):
+                return narrative, False
+
+        # -------------------------------------------------------------
+        # 3. SEMANTIC ATTRIBUTION: Income vs Expense Attribution
+        # -------------------------------------------------------------
+        income_claim_pattern = re.compile(
+            r"(\d+(?:\.\d+)?)\s*%\s*(?:of|from)\s*(?:your|the)?\s*(?:total)?\s*income",
+            re.IGNORECASE,
+        )
+        for m in income_claim_pattern.finditer(narrative):
+            claimed_pct = round(float(m.group(1)), 1)
+            if claimed_pct in expense_category_pcts and not any(abs(claimed_pct - inc) <= 0.6 for inc in income_share_pcts):
+                return narrative, False
+
+        # -------------------------------------------------------------
+        # 4. TRANSACTION COUNT VALIDATION
+        # -------------------------------------------------------------
+        count_pattern = re.compile(r"(\d+)\s+transactions?", re.IGNORECASE)
+        found_counts = count_pattern.findall(narrative)
+        valid_counts = {
+            facts["totals"].get("transaction_count", 0),
+            len(facts.get("anomalies", [])),
+            len(facts.get("top_expenses", [])),
+        }
+        for c in facts.get("categories", []):
+            valid_counts.add(c.get("transaction_count", 0))
+
+        for raw_cnt in found_counts:
+            cnt = int(raw_cnt)
+            if cnt > 1 and cnt not in valid_counts:
                 return narrative, False
 
         return narrative, True

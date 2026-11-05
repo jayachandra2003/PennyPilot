@@ -11,6 +11,48 @@ from app.domain.copilot import FactBundleBuilder
 from app.domain.currency import format_inr
 
 
+def classify_financial_health(
+    savings_rate_percent: float,
+    net_balance_paise: int,
+    pace_status: str,
+    is_over_budget: bool,
+    projected_overrun_formatted: str,
+) -> tuple[str, str]:
+    """
+    Multi-factor financial health matrix combining Cash Flow, Savings Rate, and Budget Pacing.
+    Prevents a high savings rate from masking dangerous budget overspending.
+
+    Statuses:
+    - 'Deficit': Net balance <= 0 (outflows exceed inflows).
+    - 'Over Budget': Total expenses have breached the monthly budget ceiling.
+    - 'Pacing Alert': Positive net balance / savings rate, but daily burn rate is unsustainably fast (over_pace).
+    - 'Exceptional': Savings rate >= 40% AND budget pace is strictly on_track.
+    - 'Healthy': Savings rate >= 20% AND budget pace is strictly on_track.
+    - 'Moderate': Savings rate > 0% AND budget pace is strictly on_track.
+    """
+    if net_balance_paise <= 0:
+        return "Deficit", "negative cash flow where expenses exceeded monthly income"
+
+    if is_over_budget or pace_status == "over_budget":
+        return "Over Budget", "expenses having exceeded your established monthly budget ceiling"
+
+    if pace_status == "over_pace":
+        return (
+            "Pacing Alert",
+            f"elevated daily spending velocity tracking toward a projected month-end budget overrun of {projected_overrun_formatted}",
+        )
+
+    # When budget pacing is on_track:
+    if savings_rate_percent >= 40.0:
+        return "Exceptional", "outstanding cash retention and disciplined budget pacing"
+    elif savings_rate_percent >= 20.0:
+        return "Healthy", "solid savings buffer above standard benchmarks with controlled budget pacing"
+    elif savings_rate_percent > 0.0:
+        return "Moderate", "positive cash flow with on-track budget adherence, though savings buffers remain modest"
+    else:
+        return "Break Even", "zero net savings retained for the period"
+
+
 class MonthlyNarrativeReportGenerator:
     """Generates structured monthly intelligence reports combining verified ledger telemetry with actionable guidance."""
 
@@ -34,20 +76,14 @@ class MonthlyNarrativeReportGenerator:
         anomalies = facts["anomalies"]
         top_cat = facts["top_category"]
 
-        # 2. Executive Verdict Construction
-        rate = totals["savings_rate_percent"]
-        if rate >= 40.0:
-            health_status = "Exceptional"
-            verdict_tone = "outstanding financial discipline"
-        elif rate >= 20.0:
-            health_status = "Healthy"
-            verdict_tone = "stable savings buffer above standard benchmarks"
-        elif rate > 0.0:
-            health_status = "Moderate"
-            verdict_tone = "positive cash flow but vulnerable savings rate"
-        else:
-            health_status = "Overspent"
-            verdict_tone = "negative cash flow requiring immediate attention"
+        # 2. Multi-factor Executive Verdict Construction
+        health_status, verdict_tone = classify_financial_health(
+            savings_rate_percent=totals["savings_rate_percent"],
+            net_balance_paise=totals["net_balance_paise"],
+            pace_status=pace["status"],
+            is_over_budget=pace.get("is_over_budget", False),
+            projected_overrun_formatted=pace.get("projected_overrun_formatted", "₹0.00"),
+        )
 
         executive_summary = (
             f"In {period['year']}-{period['month']:02d}, you maintained a **{health_status}** financial posture with {verdict_tone}. "

@@ -184,7 +184,10 @@ class AIOrchestrator:
             "2. NEVER invent, calculate, or extrapolate unverified totals.\n"
             "3. Format currency with Indian Rupee symbol (e.g., ₹12,500.00) in bold.\n"
             "4. Keep your answer concise (2-4 sentences), professional, empathetic, and actionable.\n"
-            "5. Do NOT provide speculative investment advice."
+            "5. Do NOT provide speculative investment advice.\n"
+            "6. When explaining why expenses increased, ONLY attribute the increase to categories that actually grew (under 'increase_drivers'). "
+            "NEVER claim that a fixed recurring expense (like rent) caused the increase if its amount was unchanged.\n"
+            "7. Clearly distinguish percentage of total expenses from percentage of total income; do NOT confuse them."
         )
 
         # Compact facts payload for token efficiency
@@ -205,6 +208,14 @@ class AIOrchestrator:
             "mom_delta": {
                 "expense_delta": facts["mom_delta"]["expense_delta_formatted"],
                 "pct_change": facts["mom_delta"]["expense_pct_change"],
+                "categories_driving_increase": [
+                    {"category": s["category_name"], "increase": s["diff_formatted"]}
+                    for s in facts["mom_delta"].get("increase_drivers", [])[:2]
+                ],
+                "unchanged_baseline": [
+                    {"category": s["category_name"], "amount": s.get("diff_formatted", "₹0.00"), "note": "constant in both months, did NOT cause increase"}
+                    for s in facts["mom_delta"].get("unchanged_categories", [])[:1]
+                ],
             },
         }
 
