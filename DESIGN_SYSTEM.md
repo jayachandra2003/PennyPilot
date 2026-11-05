@@ -13,7 +13,7 @@ PennyPilot's design system elevates personal financial intelligence into an inst
 2. **1px Hairline Architecture:** Separation is achieved through crisp 1px borders (`#E5E0D8`) and neutral surface shifts, entirely eliminating muddy drop shadows and heavy card elevations.
 3. **Restrained Color with Surgical Accents:** 90% of the interface consists of warm off-white canvas, pure white card surfaces, slate text, and subtle stone dividers. Deep forest teal (`#0F766E`) is reserved strictly for primary interactive focus, confirmed actions, and positive financial metrics.
 4. **Information Density with Intentional Breathing Room:** Dense, compact table rows (36–40px) maximize financial data visible above the fold, balanced by clean horizontal whitespace.
-5. **Universal Accessibility (WCAG 2.1 AA):** High-contrast text tiers (minimum 4.6:1 for subtle metadata, 7.1:1 for body copy, and 14.2:1 for headline ink), high-visibility 2px focus rings, and guaranteed $\ge 44\text{ px}$ mobile touch targets.
+5. **Universal Accessibility (WCAG 2.1 AA):** High-contrast text tiers (minimum 7.37:1 for secondary copy [AAA], and 16.93:1 for headline ink [AAA]; subtle metadata and graphical indicators meet 3.46:1–3.77:1 [AA non-text / large text], with essential body copy strictly leveraging inkMuted [7.37:1]), high-visibility 2px focus rings, and guaranteed $\ge 44\text{ px}$ mobile touch targets.
 
 ---
 
@@ -30,19 +30,19 @@ All tokens are defined in [`frontend/tailwind.config.js`](file:///d:/projects/Pe
 | `ledger-border` | `#E5E0D8` | Primary 1px hairline structural border | Crisp structural boundary |
 | `ledger-borderSubtle` | `#EFECE6` | Secondary inner divider lines and table row separators | Hairline divider |
 | `ledger-borderDark` | `#D5CFC3` | Active, focused, or hovered input/button border | Focus transition |
-| `ledger-ink` | `#121417` | High-contrast primary typographic ink (Headlines, balance figures) | **14.2:1** vs canvas (AAA) |
-| `ledger-inkMuted` | `#4A515A` | Secondary descriptive text, labels, notes | **7.1:1** vs canvas (AAA) |
-| `ledger-inkSubtle` | `#7D848F` | Timestamps, column headers, metadata tags | **4.6:1** vs canvas (AA) |
-| `ledger-inkFaint` | `#A4ABB5` | Placeholder text, disabled controls | Accessible placeholder |
-| `ledger-teal` | `#0F766E` | Surgical primary brand accent, primary CTA, active focus | **5.3:1** vs white (AA) |
-| `ledger-tealHover` | `#0D635C` | Primary button hover and pressed state | Enhanced contrast |
-| `ledger-tealLight` | `#EAF4F2` | Micro-badge background and positive highlight wash | Subtle brand tint |
-| `ledger-amber` | `#B45309` | Restrained warning, budget caution, statistical anomaly | **4.8:1** vs white (AA) |
-| `ledger-amberLight` | `#FEF3C7` | Warning badge background tint | Warning tint |
-| `ledger-red` | `#BE123C` | Critical budget overrun, deficit, delete actions | **6.1:1** vs white (AA) |
-| `ledger-redLight` | `#FEE2E2` | Critical alert badge background tint | Critical tint |
-| `ledger-sage` | `#047857` | Confirmed income, savings rate discipline, under-budget | **5.1:1** vs white (AA) |
-| `ledger-sageLight` | `#E8F5EE` | Positive status badge background tint | Positive tint |
+| `ledger-ink` | `#121417` | High-contrast primary typographic ink (Headlines, balance figures) | **16.93:1** vs canvas / **18.45:1** vs white (AAA) |
+| `ledger-inkMuted` | `#4A515A` | Secondary descriptive text, labels, notes | **7.37:1** vs canvas / **8.03:1** vs white (AAA) |
+| `ledger-inkSubtle` | `#7D848F` | Timestamps, column headers, metadata tags, UI icons | **3.46:1** vs canvas / **3.77:1** vs white (AA Large Text / Non-text SC 1.4.11) |
+| `ledger-inkFaint` | `#A4ABB5` | Placeholder text, disabled controls (WCAG exempt) | **2.12:1** vs canvas / **2.32:1** vs white (Inactive UI) |
+| `ledger-teal` | `#0F766E` | Surgical primary brand accent, primary CTA, active focus | **5.02:1** vs canvas / **5.47:1** vs white (AA) |
+| `ledger-tealHover` | `#0D635C` | Primary button hover and pressed state | **7.10:1** vs white (AAA) |
+| `ledger-tealLight` | `#EAF4F2` | Micro-badge background and positive highlight wash | **4.88:1** contrast with `ledger-teal` text (AA) |
+| `ledger-amber` | `#B45309` | Restrained warning, budget caution, statistical anomaly | **4.61:1** vs canvas / **5.02:1** vs white (AA) |
+| `ledger-amberLight` | `#FEF3C7` | Warning badge background tint | **4.51:1** contrast with `ledger-amber` text (AA) |
+| `ledger-red` | `#BE123C` | Critical budget overrun, deficit, delete actions | **5.77:1** vs canvas / **6.29:1** vs white (AA) |
+| `ledger-redLight` | `#FEE2E2` | Critical alert badge background tint | **5.15:1** contrast with `ledger-red` text (AA) |
+| `ledger-sage` | `#047857` | Confirmed income, savings rate discipline, under-budget | **5.03:1** vs canvas / **5.48:1** vs white (AA) |
+| `ledger-sageLight` | `#E8F5EE` | Positive status badge background tint | **4.89:1** contrast with `ledger-sage` text (AA) |
 
 ---
 
