@@ -106,7 +106,7 @@ function MainDashboard() {
       <OfflineBanner />
       <Navbar currentTab={currentTab} onSelectTab={handleTabSelect} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8 pb-24 md:pb-12">
+      <main className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-6 space-y-5 md:space-y-6 pb-20 md:pb-10">
         {/* TAB 1: DASHBOARD */}
         {currentTab === "dashboard" && (
           <div className="space-y-6 md:space-y-8 animate-fade-in">

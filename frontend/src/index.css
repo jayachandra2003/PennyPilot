@@ -3,20 +3,73 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --canvas-bg: #F7F5F0;
+    --surface-card: #FFFFFF;
+    --surface-subtle: #FAF9F6;
+    --surface-hover: #F5F3ED;
+    --border-hairline: #E5E0D8;
+    --border-subtle: #EFECE6;
+    --border-dark: #D5CFC3;
+    --ink-primary: #121417;
+    --ink-secondary: #4A515A;
+    --ink-tertiary: #7D848F;
+    --ink-faint: #A4ABB5;
+    --brand-teal: #0F766E;
+    --brand-teal-hover: #0D635C;
+    --brand-teal-light: #EAF4F2;
+  }
+
   html {
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    background-color: #F7F5F0;
-    color: #14161A;
+    background-color: var(--canvas-bg);
+    color: var(--ink-primary);
+  }
+}
+
+@layer components {
+  /* Institutional Button Foundations */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-md text-xs sm:text-sm font-medium bg-ledger-teal text-white hover:bg-ledger-tealHover active:translate-y-px transition-colors shadow-subtle select-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-md text-xs sm:text-sm font-medium border border-ledger-border bg-ledger-surface text-ledger-ink hover:bg-ledger-surfaceHover hover:border-ledger-borderDark active:translate-y-px transition-colors shadow-subtle select-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 min-h-[36px] rounded-md text-xs sm:text-sm font-medium text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle transition-colors select-none;
+  }
+
+  /* Institutional Input & Select Foundations */
+  .input-base {
+    @apply w-full px-3 py-2 min-h-[36px] rounded-md border border-ledger-border bg-ledger-surfaceSubtle text-xs sm:text-sm text-ledger-ink placeholder:text-ledger-inkFaint hover:border-ledger-borderDark focus:bg-ledger-surface transition-colors;
+  }
+
+  /* Editorial Card Foundation */
+  .card-base {
+    @apply bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-5 space-y-4;
+  }
+
+  /* Structured Micro-Badge Foundation */
+  .badge-tag {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono tracking-wider uppercase border border-ledger-borderSubtle bg-ledger-surfaceSubtle text-ledger-inkMuted;
   }
 }
 
 @layer utilities {
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+
+  .font-financial {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    letter-spacing: -0.01em;
   }
 
   /* Safe area insets for mobile notched devices */

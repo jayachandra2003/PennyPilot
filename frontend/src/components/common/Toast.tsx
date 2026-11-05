@@ -42,23 +42,18 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-float border transition-all transform translate-y-0 opacity-100 ${
-                isSuccess
-                  ? "bg-ledger-surface border-ledger-sage/30 text-ledger-ink"
-                  : isError
-                  ? "bg-ledger-surface border-ledger-red/30 text-ledger-ink"
-                  : "bg-ledger-surface border-ledger-teal/30 text-ledger-ink"
-              }`}
+              className="pointer-events-auto flex items-start gap-3 p-3.5 rounded-lg shadow-float border border-ledger-border bg-ledger-surface text-ledger-ink transition-all animate-fade-in"
             >
-              {isSuccess && <CheckCircle2 className="w-5 h-5 text-ledger-sage shrink-0 mt-0.5" />}
-              {isError && <AlertCircle className="w-5 h-5 text-ledger-red shrink-0 mt-0.5" />}
-              {!isSuccess && !isError && <Info className="w-5 h-5 text-ledger-teal shrink-0 mt-0.5" />}
-              <div className="flex-1 text-xs md:text-sm font-medium leading-relaxed">{t.message}</div>
+              {isSuccess && <CheckCircle2 className="w-4 h-4 text-ledger-sage shrink-0 mt-0.5" />}
+              {isError && <AlertCircle className="w-4 h-4 text-ledger-red shrink-0 mt-0.5" />}
+              {!isSuccess && !isError && <Info className="w-4 h-4 text-ledger-teal shrink-0 mt-0.5" />}
+              <div className="flex-1 text-xs font-medium leading-relaxed">{t.message}</div>
               <button
                 onClick={() => removeToast(t.id)}
-                className="text-ledger-inkSubtle hover:text-ledger-ink focus-ring rounded"
+                className="text-ledger-inkSubtle hover:text-ledger-ink focus-ring rounded p-0.5"
+                aria-label="Dismiss toast"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           );
