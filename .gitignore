@@ -1,0 +1,83 @@
+# Environment and Secrets (CRITICAL SECURITY)
+.env
+.env.local
+.env.*.local
+*.env
+*.key
+*.pem
+*.cert
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Databases & Local Storage
+*.db*
+*.sqlite*
+penny_pilot.db*
+test.db*
+
+# Node & Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.turbo/
+.cache/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+.nyc_output/
+*.lcov
+
+# IDE & OS Artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs & Temporary files
+logs/
+*.log
+scratch/
+tmp/

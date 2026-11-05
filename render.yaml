@@ -1,0 +1,33 @@
+# Zero-Budget Render Deployment Blueprint for PennyPilot
+services:
+  - type: web
+    name: pennypilot-backend
+    env: python
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.5
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 1440
+      - key: DATABASE_URL
+        sync: false # Set to Neon PostgreSQL connection string in Render dashboard
+      - key: ALLOWED_ORIGINS
+        value: https://pennypilot.vercel.app,http://localhost:5173
+      - key: GEMINI_API_KEY
+        sync: false # Free Google AI Studio API key
+      - key: DEFAULT_TIMEZONE
+        value: Asia/Kolkata
+      - key: DEFAULT_CURRENCY
+        value: INR
