@@ -1,12 +1,26 @@
 """Application configuration using Pydantic Settings."""
+import re
+from pathlib import Path
 from typing import List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Anchored to the repository root: parent directory of 'backend' package
+PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
+
+
+def get_default_sqlite_url() -> str:
+    """
+    Resolve the default SQLite URL deterministically relative to the repository root.
+    Ensures forward-slash posix formatting for cross-platform SQLAlchemy compatibility.
+    """
+    db_path = PROJECT_ROOT / "penny_pilot.db"
+    return f"sqlite:///{db_path.as_posix()}"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(PROJECT_ROOT / ".env"), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -24,14 +38,38 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
     # Database
-    DATABASE_URL: str = "sqlite:///./penny_pilot.db"
+    DATABASE_URL: str = get_default_sqlite_url()
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: str) -> str:
-        if isinstance(v, str) and v.startswith("postgres://"):
+        if not v or not isinstance(v, str) or not v.strip():
+            return get_default_sqlite_url()
+
+        v = v.strip()
+        if v.startswith("postgres://"):
             # SQLAlchemy 1.4+ / 2.0 requires postgresql:// instead of postgres://
             return v.replace("postgres://", "postgresql://", 1)
+
+        # In-memory SQLite or external non-sqlite schemes preserved directly
+        if v == "sqlite:///:memory:" or v.startswith("postgresql://") or ("://" in v and not v.startswith("sqlite:///")):
+            return v
+
+        # Normalize SQLite paths to deterministic project root location
+        if v.startswith("sqlite:///"):
+            raw_path = v[len("sqlite:///"):]
+            # Check if raw_path is already absolute
+            # On Windows: drive letter like C:/ or C:\
+            # On POSIX: starts with /
+            is_absolute = bool(re.match(r"^[a-zA-Z]:[/\\\\]", raw_path) or raw_path.startswith("/"))
+            if is_absolute:
+                p = Path(raw_path).resolve()
+                return f"sqlite:///{p.as_posix()}"
+            else:
+                # Relative path: anchor to PROJECT_ROOT deterministically
+                p = (PROJECT_ROOT / raw_path).resolve()
+                return f"sqlite:///{p.as_posix()}"
+
         return v
 
     # CORS

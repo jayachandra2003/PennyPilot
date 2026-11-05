@@ -1,8 +1,10 @@
 """FastAPI application initialization and middleware configuration."""
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.engine.url import make_url
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -20,16 +22,33 @@ from app.db.session import engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events: configure logging and ensure database tables exist."""
+    """Lifecycle events: configure logging and ensure database connection."""
     setup_logging(debug=settings.DEBUG)
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
 
-    # In development/local SQLite, auto-create tables if not present
+    # Inspect and report database connection path (with credentials masked if applicable)
+    safe_db_url = make_url(settings.DATABASE_URL).render_as_string(hide_password=True)
+    logger.info(f"Database resolved connection: {safe_db_url}")
+
+    # Guard against accidental automatic creation of an empty database in development
+    parsed_url = make_url(settings.DATABASE_URL)
+    if parsed_url.get_backend_name() == "sqlite" and parsed_url.database and parsed_url.database != ":memory:":
+        db_file = Path(parsed_url.database)
+        if not db_file.exists():
+            error_msg = (
+                f"Configured SQLite database file not found at '{db_file}'. "
+                "Automatic creation of an empty database is prohibited in development to prevent data loss."
+            )
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+
+    # In development/local SQLite, verify database connectivity
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info("Database tables initialized successfully.")
+        logger.info("Database tables verified successfully.")
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
+        raise
 
     yield
     logger.info("Shutting down application cleanly.")
