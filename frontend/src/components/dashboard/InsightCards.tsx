@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, Clock, ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
+import { AlertTriangle, Clock, ShieldCheck, ArrowRight } from "lucide-react";
 import type { AnomalyItem, BudgetPace, MonthlySummary } from "../../lib/api";
 import { formatINR } from "../../lib/currency";
 
@@ -29,7 +29,7 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
       evidence: pace.verdict_sentence,
       severity: isOver ? ("warning" as const) : ("positive" as const),
       icon: Clock,
-      actionLabel: "Adjust Budgets",
+      actionLabel: "Adjust Allocations",
       action: onNavigateToBudgets,
     });
   }
@@ -43,7 +43,7 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
       evidence: top.evidence,
       severity: "warning" as const,
       icon: AlertTriangle,
-      actionLabel: "View in Ledger",
+      actionLabel: "Inspect in Ledger",
       action: onNavigateToTransactions,
     });
   }
@@ -71,16 +71,15 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            AI Signals
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
+            Signals & Intelligence
           </span>
-          <h3 className="font-sans text-lg sm:text-xl font-bold text-slate-900">
-            Financial Intelligence
-          </h3>
+          <h2 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
+            Grounded Financial Intelligence
+          </h2>
         </div>
-        <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-          <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-          <span>Verified FactBundle</span>
+        <span className="text-xs font-mono text-ledger-inkSubtle hidden sm:inline">
+          Deterministic Rule Engine
         </span>
       </div>
 
@@ -93,40 +92,40 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
           return (
             <div
               key={c.id}
-              className={`bg-white border rounded-xl shadow-sm p-4 sm:p-5 flex flex-col justify-between space-y-3 transition-colors min-w-0 overflow-hidden ${
+              className={`bg-ledger-surface border rounded-lg shadow-card p-4 sm:p-5 flex flex-col justify-between space-y-3 transition-colors min-w-0 overflow-hidden ${
                 isWarning
-                  ? "border-amber-200"
+                  ? "border-ledger-amber/40"
                   : isPositive
-                  ? "border-emerald-200"
-                  : "border-slate-200"
+                  ? "border-ledger-sage/40"
+                  : "border-ledger-border"
               }`}
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                    className={`w-7 h-7 rounded flex items-center justify-center shrink-0 border ${
                       isWarning
-                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        ? "bg-ledger-amberLight text-ledger-amber border-ledger-amber/30"
                         : isPositive
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-teal-50 text-teal-700 border-teal-200"
+                        ? "bg-ledger-sageLight text-ledger-sage border-ledger-sage/30"
+                        : "bg-ledger-tealLight text-ledger-teal border-ledger-teal/30"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1">
+                  <h3 className="text-xs sm:text-sm font-semibold text-ledger-ink line-clamp-1">
                     {c.title}
-                  </h4>
+                  </h3>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-ledger-inkMuted leading-relaxed">
                   {c.evidence}
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <div className="pt-2 border-t border-ledger-borderSubtle flex justify-end">
                 <button
                   onClick={c.action}
-                  className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1 focus-ring py-0.5 px-1 rounded-md"
+                  className="text-xs font-medium text-ledger-teal hover:text-ledger-tealHover flex items-center gap-1 focus-ring py-0.5 px-1 rounded"
                 >
                   <span>{c.actionLabel}</span>
                   <ArrowRight className="w-3.5 h-3.5" />

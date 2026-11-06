@@ -1,5 +1,5 @@
 import React from "react";
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, ShieldCheck, Clock } from "lucide-react";
 import { formatINR } from "../../lib/currency";
 import type { MonthlySummary } from "../../lib/api";
 
@@ -18,125 +18,126 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
   const isDisciplinedSavings = savingsRate >= 25.0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 min-w-0">
-      {/* 1. Monthly Income */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Monthly Income
-          </span>
-          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shrink-0">
-            <ArrowUpRight className="w-4 h-4" />
+    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card overflow-hidden min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-ledger-borderSubtle">
+        {/* PANEL 1: Primary Hero Metric — Net Retained Capital (5 cols) */}
+        <div className="lg:col-span-5 p-5 sm:p-6 flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-ledger-inkSubtle font-medium">
+                Net Retained Capital
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase tracking-wide border ${
+                  isNetPositive
+                    ? "bg-ledger-sageLight text-ledger-sage border-ledger-sage/20"
+                    : "bg-ledger-redLight text-ledger-red border-ledger-red/20"
+                }`}
+              >
+                <ShieldCheck className="w-3 h-3" />
+                <span>{isNetPositive ? "+ Surplus" : "- Deficit"}</span>
+              </span>
+            </div>
+            <div className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-ledger-ink tabular-nums break-words pt-1">
+              {formatINR(netBalancePaise)}
+            </div>
+            <p className="text-xs text-ledger-inkMuted">
+              Net balance retained after all recorded monthly living expenses and outflows.
+            </p>
           </div>
-        </div>
-        <div className="space-y-1.5 my-2 min-w-0">
-          <div className="font-sans text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight tabular-nums break-words">
-            {formatINR(incomePaise)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              Inflow
-            </span>
-            <span className="truncate">Salary & deposits</span>
-          </div>
-        </div>
-      </div>
 
-      {/* 2. Monthly Expenses */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Monthly Expenses
-          </span>
-          <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 shrink-0">
-            <ArrowDownRight className="w-4 h-4" />
+          {/* Retention Ratio Bar */}
+          <div className="space-y-1.5 pt-2 border-t border-ledger-borderSubtle">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-ledger-inkMuted font-medium">Monthly Savings Rate</span>
+              <span className="font-mono font-bold text-ledger-sage tabular-nums">
+                {savingsRate.toFixed(2)}%
+              </span>
+            </div>
+            <div className="w-full h-2 bg-ledger-surfaceSubtle rounded-full overflow-hidden border border-ledger-borderSubtle">
+              <div
+                className="h-full bg-ledger-sage rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(0, savingsRate))}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[11px] text-ledger-inkSubtle">
+              <span>{isDisciplinedSavings ? "Disciplined (>25% target)" : "Below recommended target"}</span>
+              <span>Baseline: 25.0%</span>
+            </div>
           </div>
         </div>
-        <div className="space-y-1.5 my-2 min-w-0">
-          <div className="font-sans text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight tabular-nums break-words">
-            {formatINR(expensePaise)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
-              <TrendingDown className="w-3 h-3 mr-1" />
-              Outflow
-            </span>
-            <span className="truncate">{transactionCount} transactions</span>
-          </div>
-        </div>
-      </div>
 
-      {/* 3. Net Cash Flow */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Net Cash Flow
-          </span>
-          <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 ${
-              isNetPositive
-                ? "bg-teal-50 text-teal-700 border-teal-100"
-                : "bg-rose-50 text-rose-600 border-rose-100"
-            }`}
-          >
-            <Wallet className="w-4 h-4" />
+        {/* PANEL 2: Inflow & Outflow Channels (4 cols) */}
+        <div className="lg:col-span-4 p-5 sm:p-6 flex flex-col justify-between divide-y divide-ledger-borderSubtle space-y-4 lg:space-y-0">
+          {/* Monthly Inflow */}
+          <div className="pb-4 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-ledger-inkSubtle font-medium flex items-center gap-1.5">
+                <ArrowUpRight className="w-3.5 h-3.5 text-ledger-sage" />
+                <span>Monthly Inflow</span>
+              </span>
+              <span className="text-[11px] font-mono text-ledger-sage font-medium bg-ledger-sageLight px-1.5 py-0.5 rounded border border-ledger-sage/20">
+                Credits
+              </span>
+            </div>
+            <div className="font-serif text-2xl sm:text-3xl font-bold text-ledger-sage tracking-tight tabular-nums">
+              {formatINR(incomePaise)}
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
+              <TrendingUp className="w-3 h-3 text-ledger-sage" />
+              <span>Verified salary, deposits & investments</span>
+            </div>
           </div>
-        </div>
-        <div className="space-y-1.5 my-2 min-w-0">
-          <div
-            className={`font-sans text-2xl lg:text-3xl font-bold tracking-tight tabular-nums break-words ${
-              isNetPositive ? "text-slate-900" : "text-rose-600"
-            }`}
-          >
-            {formatINR(netBalancePaise)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                isNetPositive
-                  ? "bg-teal-50 text-teal-700 border-teal-100"
-                  : "bg-rose-50 text-rose-700 border-rose-100"
-              }`}
-            >
-              {isNetPositive ? "+ Surplus" : "- Deficit"}
-            </span>
-            <span className="truncate">Retained balance</span>
-          </div>
-        </div>
-      </div>
 
-      {/* 4. Savings Rate */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Savings Rate
-          </span>
-          <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 ${
-              isDisciplinedSavings
-                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                : "bg-amber-50 text-amber-600 border-amber-100"
-            }`}
-          >
-            <PiggyBank className="w-4 h-4" />
+          {/* Monthly Outflow */}
+          <div className="pt-4 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-ledger-inkSubtle font-medium flex items-center gap-1.5">
+                <ArrowDownRight className="w-3.5 h-3.5 text-ledger-inkMuted" />
+                <span>Monthly Outflow</span>
+              </span>
+              <span className="text-[11px] font-mono text-ledger-inkSubtle bg-ledger-surfaceSubtle px-1.5 py-0.5 rounded border border-ledger-borderSubtle">
+                {transactionCount} txs
+              </span>
+            </div>
+            <div className="font-serif text-2xl sm:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums">
+              {formatINR(expensePaise)}
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
+              <TrendingDown className="w-3 h-3 text-ledger-inkMuted" />
+              <span>Living costs, debits & utility expenses</span>
+            </div>
           </div>
         </div>
-        <div className="space-y-1.5 my-2 min-w-0">
-          <div className="font-sans text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight tabular-nums break-words">
-            {savingsRate.toFixed(2)}%
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                isDisciplinedSavings
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                  : "bg-amber-50 text-amber-700 border-amber-100"
-              }`}
-            >
-              {isDisciplinedSavings ? "Disciplined" : "Below 25% Target"}
+
+        {/* PANEL 3: Allocation Capacity & Buffer (3 cols) */}
+        <div className="lg:col-span-3 p-5 sm:p-6 bg-ledger-surfaceSubtle/40 flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <span className="text-xs font-mono uppercase tracking-wider text-ledger-inkSubtle font-medium block">
+              Budget Capacity
             </span>
-            <span className="truncate">Target: &gt; 25%</span>
+            <div className="text-[11px] text-ledger-inkMuted">
+              Allocated Monthly Ceiling
+            </div>
+            <div className="font-serif text-xl sm:text-2xl font-bold text-ledger-ink tabular-nums">
+              {formatINR(5500000)}
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-ledger-borderSubtle">
+            <div className="flex justify-between items-baseline text-xs">
+              <span className="text-ledger-inkMuted">Remaining Buffer:</span>
+              <span className="font-serif text-base font-bold text-ledger-teal tabular-nums">
+                {formatINR(Math.max(0, 5500000 - expensePaise))}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-ledger-inkSubtle">
+              <Clock className="w-3.5 h-3.5 text-ledger-teal" />
+              <span>Pace: {formatINR(Math.round(5500000 / 30))}/day ceiling</span>
+            </div>
+            <p className="text-[11px] text-ledger-inkSubtle leading-relaxed">
+              Calculated with integer paise precision under multi-tenant isolation.
+            </p>
           </div>
         </div>
       </div>

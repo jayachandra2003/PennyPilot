@@ -1,7 +1,7 @@
 import React from "react";
 import type { CategoryBreakdownItem } from "../../lib/api";
 import { formatINR } from "../../lib/currency";
-import { PieChart, Utensils, ShoppingBag, Home, Zap, Film, HeartPulse, HelpCircle } from "lucide-react";
+import { Utensils, ShoppingBag, Home, Zap, Film, HeartPulse, HelpCircle } from "lucide-react";
 
 interface CategoryBreakdownCardProps {
   categories: CategoryBreakdownItem[];
@@ -22,12 +22,12 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_COLORS = [
-  "bg-teal-600",
-  "bg-slate-800",
-  "bg-indigo-600",
-  "bg-amber-500",
-  "bg-emerald-600",
-  "bg-rose-500",
+  "bg-ledger-teal",
+  "bg-[#334155]", // Slate 700
+  "bg-[#4F46E5]", // Indigo 600
+  "bg-ledger-amber",
+  "bg-ledger-sage",
+  "bg-ledger-red",
 ];
 
 export const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
@@ -43,62 +43,79 @@ export const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4 min-w-0">
+    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
+      <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
         <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Spending Breakdown
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
+            Allocation Distribution
           </span>
-          <h3 className="font-sans text-lg sm:text-xl font-bold text-slate-900">
+          <h2 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
             Category Spending
-          </h3>
+          </h2>
         </div>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-          <PieChart className="w-3.5 h-3.5 text-slate-500" />
-          <span>{totalExpensePaise ? formatINR(totalExpensePaise) : "Ranked"}</span>
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium bg-ledger-surfaceSubtle text-ledger-ink border border-ledger-borderSubtle">
+          <span>Total: {totalExpensePaise ? formatINR(totalExpensePaise) : "Ranked"}</span>
         </span>
       </div>
 
       {categories.length === 0 ? (
-        <div className="text-center py-10 text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+        <div className="text-center py-10 text-xs text-ledger-inkMuted bg-ledger-surfaceSubtle/50 rounded border border-dashed border-ledger-border">
           No expense transactions recorded for this period.
         </div>
       ) : (
         <div className="space-y-4">
-          {categories.slice(0, 6).map((cat, idx) => {
-            const Icon = getCategoryIcon(cat.category_name);
-            const colorClass = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+          {/* Multi-Segment Composite Distribution Bar */}
+          <div className="space-y-1.5">
+            <div className="w-full h-3 bg-ledger-surfaceSubtle rounded overflow-hidden flex border border-ledger-borderSubtle">
+              {categories.slice(0, 6).map((cat, idx) => (
+                <div
+                  key={cat.category_id}
+                  className={`h-full ${CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} transition-all`}
+                  style={{ width: `${Math.max(2, cat.percentage)}%` }}
+                  title={`${cat.category_name}: ${cat.percentage}% (${cat.formatted_total})`}
+                />
+              ))}
+            </div>
+          </div>
 
-            return (
-              <div key={cat.category_id} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-6 h-6 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-                      <Icon className="w-3.5 h-3.5" />
+          {/* Structured Category List */}
+          <div className="space-y-3 pt-1">
+            {categories.slice(0, 6).map((cat, idx) => {
+              const Icon = getCategoryIcon(cat.category_name);
+              const colorClass = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+
+              return (
+                <div key={cat.category_id} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-2 h-2 rounded-full ${colorClass} shrink-0`} />
+                      <div className="w-5 h-5 rounded bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center shrink-0 border border-ledger-borderSubtle">
+                        <Icon className="w-3 h-3" />
+                      </div>
+                      <span className="font-medium text-ledger-ink truncate">{cat.category_name}</span>
+                      <span className="text-[11px] font-mono text-ledger-inkSubtle shrink-0">
+                        ({cat.transaction_count} txs)
+                      </span>
                     </div>
-                    <span className="font-semibold text-slate-800 truncate">{cat.category_name}</span>
-                    <span className="text-[11px] text-slate-400 shrink-0">
-                      ({cat.transaction_count} txs)
-                    </span>
+                    <div className="flex items-center gap-2 tabular-nums">
+                      <span className="font-serif font-bold text-ledger-ink">{cat.formatted_total}</span>
+                      <span className="font-mono text-[11px] text-ledger-inkMuted w-12 text-right">
+                        {cat.percentage}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 tabular-nums">
-                    <span className="font-bold text-slate-900">{cat.formatted_total}</span>
-                    <span className="inline-block px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 w-11 text-center">
-                      {cat.percentage}%
-                    </span>
-                  </div>
-                </div>
 
-                {/* Proportional Progress Bar */}
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
-                    style={{ width: `${Math.min(100, Math.max(3, cat.percentage))}%` }}
-                  />
+                  {/* Individual proportional bar */}
+                  <div className="w-full bg-ledger-surfaceSubtle h-1.5 rounded-full overflow-hidden border border-ledger-borderSubtle">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
+                      style={{ width: `${Math.min(100, Math.max(3, cat.percentage))}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

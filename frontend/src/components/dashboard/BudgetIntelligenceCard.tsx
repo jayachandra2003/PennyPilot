@@ -44,7 +44,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
   // Calculate cumulative spend series
   const series: Array<{ day: number; cumulativeSpendPaise: number; targetPacePaise: number; dailyPaise: number }> = [];
   let runningSpend = 0;
-  let maxDailyPaise = Math.round((totalBudgetPaise / totalDays) * 2.5); // Baseline scale
+  let maxDailyPaise = Math.round((totalBudgetPaise / totalDays) * 2.5);
 
   for (let day = 1; day <= totalDays; day++) {
     const daySpend = dailySpend[day] || 0;
@@ -72,7 +72,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
   // SVG Chart Layout
   const width = 680;
   const height = 210;
-  const padding = { top: 20, right: 24, bottom: 28, left: 60 };
+  const padding = { top: 20, right: 24, bottom: 28, left: 64 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -103,80 +103,78 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
   const barWidth = Math.max(4, Math.floor(chartWidth / totalDays) - 3);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5 min-w-0 overflow-hidden">
+    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5 min-w-0 overflow-hidden">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
         <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Activity & Pacing
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
+            Spending Velocity
           </span>
-          <h3 className="font-sans text-lg sm:text-xl font-bold text-slate-900">
-            Daily Spending Activity
-          </h3>
+          <h2 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
+            Financial Trajectory & Daily Velocity
+          </h2>
         </div>
 
-        {/* View Mode Toggle & Legend */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode("daily")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                viewMode === "daily"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Daily Bars</span>
-            </button>
-            <button
-              onClick={() => setViewMode("cumulative")}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                viewMode === "cumulative"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <LineChart className="w-3.5 h-3.5" />
-              <span>Cumulative Pace</span>
-            </button>
-          </div>
+        {/* View Mode Toggle */}
+        <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5 self-start sm:self-auto">
+          <button
+            onClick={() => setViewMode("daily")}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+              viewMode === "daily"
+                ? "bg-ledger-surface text-ledger-ink font-semibold shadow-hairline border border-ledger-borderSubtle"
+                : "text-ledger-inkMuted hover:text-ledger-ink"
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-ledger-teal" />
+            <span>Daily Bars</span>
+          </button>
+          <button
+            onClick={() => setViewMode("cumulative")}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+              viewMode === "cumulative"
+                ? "bg-ledger-surface text-ledger-ink font-semibold shadow-hairline border border-ledger-borderSubtle"
+                : "text-ledger-inkMuted hover:text-ledger-ink"
+            }`}
+          >
+            <LineChart className="w-3.5 h-3.5 text-ledger-teal" />
+            <span>Cumulative Pace</span>
+          </button>
         </div>
       </div>
 
       {/* 4 Summary Telemetry Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 min-w-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 bg-ledger-surfaceSubtle/60 border border-ledger-borderSubtle rounded-md p-3 sm:p-4 min-w-0">
         <div className="space-y-0.5 min-w-0">
-          <span className="text-xs font-semibold text-slate-500 uppercase block truncate">Monthly Budget</span>
-          <div className="font-sans text-base sm:text-lg font-bold text-slate-900 tabular-nums truncate">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Monthly Budget</span>
+          <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums truncate">
             {formatINR(totalBudgetPaise)}
           </div>
-          <span className="text-[11px] text-slate-500 block truncate">Allocated limit</span>
+          <span className="text-[10px] text-ledger-inkSubtle block truncate">Active allocation</span>
         </div>
 
         <div className="space-y-0.5 min-w-0">
-          <span className="text-xs font-semibold text-slate-500 uppercase block truncate">Month Spend</span>
-          <div className="font-sans text-base sm:text-lg font-bold text-slate-900 tabular-nums truncate">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Month Spend</span>
+          <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums truncate">
             {formatINR(spentPaise)}
           </div>
-          <span className="text-[11px] text-slate-500 block truncate">{utilization.toFixed(1)}% consumed</span>
+          <span className="text-[10px] text-ledger-inkSubtle block truncate">{utilization.toFixed(1)}% consumed</span>
         </div>
 
         <div className="space-y-0.5 min-w-0">
-          <span className="text-xs font-semibold text-slate-500 uppercase block truncate">Remaining Buffer</span>
-          <div className="font-sans text-base sm:text-lg font-bold text-teal-700 tabular-nums truncate">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Remaining Buffer</span>
+          <div className="font-serif text-base sm:text-lg font-bold text-ledger-teal tabular-nums truncate">
             {formatINR(remainingPaise)}
           </div>
-          <span className="text-[11px] text-slate-500 block truncate">Unspent cushion</span>
+          <span className="text-[10px] text-ledger-inkSubtle block truncate">Unspent cushion</span>
         </div>
 
         <div className="space-y-0.5 min-w-0">
-          <span className="text-xs font-semibold text-slate-500 uppercase block truncate">Timeline</span>
-          <div className="font-sans text-base sm:text-lg font-bold text-slate-900 tabular-nums truncate">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Timeline</span>
+          <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums truncate">
             Day {currentDay} of {totalDays}
           </div>
-          <span className="text-[11px] text-slate-500 capitalize block truncate">
-            {pace?.status?.replace("_", " ") || "Calculating"}
+          <span className="text-[10px] text-ledger-inkSubtle capitalize block truncate">
+            Status: {pace?.status?.replace("_", " ") || "Calculating"}
           </span>
         </div>
       </div>
@@ -186,15 +184,15 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full select-none">
           <defs>
             <linearGradient id="activeBarGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0F172A" />
-              <stop offset="100%" stopColor="#334155" />
+              <stop offset="0%" stopColor="#12161A" />
+              <stop offset="100%" stopColor="#3B4450" />
             </linearGradient>
             <linearGradient id="todayBarGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#0F766E" />
               <stop offset="100%" stopColor="#14B8A6" />
             </linearGradient>
             <linearGradient id="cumulativeAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0F766E" stopOpacity="0.20" />
+              <stop offset="0%" stopColor="#0F766E" stopOpacity="0.18" />
               <stop offset="100%" stopColor="#0F766E" stopOpacity="0.0" />
             </linearGradient>
           </defs>
@@ -210,14 +208,14 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                   y1={y}
                   x2={width - padding.right}
                   y2={y}
-                  stroke="#F1F5F9"
+                  stroke="#EFECE6"
                   strokeWidth="1"
                 />
                 <text
                   x={padding.left - 8}
                   y={y + 3}
                   textAnchor="end"
-                  className="text-[9px] fill-slate-400 font-mono"
+                  className="text-[9px] fill-ledger-inkSubtle font-mono"
                 >
                   {formatINR(Math.round(labelVal), { showPaise: false })}
                 </text>
@@ -234,7 +232,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                 y1={getDailyY(dailyTargetPacePaise)}
                 x2={width - padding.right}
                 y2={getDailyY(dailyTargetPacePaise)}
-                stroke="#94A3B8"
+                stroke="#767E8A"
                 strokeWidth="1.5"
                 strokeDasharray="4 4"
               />
@@ -271,17 +269,17 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                       y={barY}
                       width={barWidth}
                       height={barH}
-                      rx={isToday || isPast ? 3 : 1}
+                      rx={isToday || isPast ? 2 : 1}
                       fill={
                         isToday
                           ? "url(#todayBarGradient)"
                           : hasSpend
                           ? "url(#activeBarGradient)"
                           : isFuture
-                          ? "#E2E8F0"
-                          : "#CBD5E1"
+                          ? "#E8E4DC"
+                          : "#D6D0C4"
                       }
-                      opacity={hoveredDay && hoveredDay !== s.day ? 0.4 : 1}
+                      opacity={hoveredDay && hoveredDay !== s.day ? 0.35 : 1}
                     />
 
                     {/* Today marker dot */}
@@ -308,7 +306,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                 y1={getCumulativeY(series[0]?.targetPacePaise || 0)}
                 x2={getX(totalDays)}
                 y2={getCumulativeY(totalBudgetPaise)}
-                stroke="#94A3B8"
+                stroke="#767E8A"
                 strokeWidth="1.5"
                 strokeDasharray="4 4"
               />
@@ -333,7 +331,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                 <circle
                   cx={getX(currentDay)}
                   cy={getCumulativeY(currentActualSpend)}
-                  r="5"
+                  r="4.5"
                   fill="#0F766E"
                   stroke="#FFFFFF"
                   strokeWidth="2"
@@ -349,7 +347,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
               x={getX(dayNum)}
               y={height - 8}
               textAnchor="middle"
-              className="text-[9px] fill-slate-400 font-mono"
+              className="text-[9px] fill-ledger-inkSubtle font-mono"
             >
               Day {dayNum}
             </text>
@@ -359,11 +357,11 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
         {/* Hover Tooltip Overlay */}
         {hoveredDay && viewMode === "daily" && (
           <div
-            className="absolute top-2 right-4 bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-md text-xs pointer-events-none transition-all flex items-center gap-2"
+            className="absolute top-2 right-4 bg-ledger-ink text-white px-2.5 py-1.5 rounded shadow-float text-xs pointer-events-none transition-all flex items-center gap-2 border border-ledger-borderDark"
           >
-            <Calendar className="w-3.5 h-3.5 text-teal-400" />
-            <span>Day {hoveredDay}:</span>
-            <span className="font-bold text-teal-300">
+            <Calendar className="w-3.5 h-3.5 text-ledger-teal" />
+            <span className="font-mono">Day {hoveredDay}:</span>
+            <span className="font-serif font-bold text-white tabular-nums">
               {formatINR(dailySpend[hoveredDay] || 0)}
             </span>
           </div>
@@ -371,24 +369,24 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
       </div>
 
       {/* Progress Track: Timeline vs Budget Utilization */}
-      <div className="pt-2 border-t border-slate-100 space-y-2">
-        <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="pt-2 border-t border-ledger-borderSubtle space-y-2">
+        <div className="flex items-center justify-between text-xs text-ledger-inkMuted">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-slate-800">Month Timeline:</span>
-            <span>Day {currentDay} of {totalDays} ({Math.round((currentDay / totalDays) * 100)}%)</span>
+            <span className="font-medium text-ledger-ink">Month Timeline:</span>
+            <span className="font-mono">Day {currentDay} of {totalDays} ({Math.round((currentDay / totalDays) * 100)}%)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-slate-800">Budget Spent:</span>
-            <span className={utilization > 100 ? "text-rose-600 font-semibold" : "text-slate-800"}>
+            <span className="font-medium text-ledger-ink">Budget Spent:</span>
+            <span className={`font-mono ${utilization > 100 ? "text-ledger-red font-semibold" : "text-ledger-ink"}`}>
               {utilization.toFixed(1)}%
             </span>
           </div>
         </div>
 
-        <div className="relative w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className="relative w-full h-2.5 bg-ledger-surfaceSubtle rounded-full overflow-hidden border border-ledger-borderSubtle">
           {/* Target Timeline Marker */}
           <div
-            className="absolute top-0 bottom-0 bg-slate-300 w-1 z-10"
+            className="absolute top-0 bottom-0 bg-ledger-inkSubtle w-0.5 z-10"
             style={{ left: `${Math.min(100, (currentDay / totalDays) * 100)}%` }}
             title={`Day ${currentDay} Timeline Position`}
           />
@@ -396,16 +394,16 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
           <div
             className={`h-full rounded-full transition-all duration-500 ${
               utilization > 100
-                ? "bg-rose-500"
+                ? "bg-ledger-red"
                 : utilization > (currentDay / totalDays) * 100 + 15
-                ? "bg-amber-500"
-                : "bg-teal-600"
+                ? "bg-ledger-amber"
+                : "bg-ledger-teal"
             }`}
             style={{ width: `${Math.min(100, utilization)}%` }}
           />
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
+        <div className="flex items-center justify-between text-[11px] text-ledger-inkSubtle font-mono">
           <span>Target pace: {formatINR(dailyTargetPacePaise)}/day</span>
           <span>
             {utilization > (currentDay / totalDays) * 100
