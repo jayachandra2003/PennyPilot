@@ -20,6 +20,8 @@ import { deleteTransaction, updateTransaction } from "../../lib/api";
 import { formatINR, paiseToRupees, rupeesToPaise } from "../../lib/currency";
 import { useToast } from "../common/Toast";
 
+export const TRANSACTION_SUBTITLE = "Your income and expenses, organized with precise INR tracking.";
+
 interface TransactionListProps {
   transactions: TransactionItem[];
   categories: CategoryItem[];
@@ -214,8 +216,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   return (
     <div className="space-y-5 md:space-y-6 min-w-0">
       {/* 1. Header & Actions Bar */}
-      <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-ledger-borderSubtle pb-4 min-w-0">
+      <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-3 sm:p-5 md:p-6 space-y-3 sm:space-y-4 min-w-0 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
@@ -226,14 +228,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               Financial Ledger
             </h2>
             <p className="text-xs text-ledger-inkMuted mt-0.5">
-              Auditable double-entry records calculated with integer paise precision.
+              {TRANSACTION_SUBTITLE}
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleExportCSV}
-              className="btn-secondary text-xs sm:text-sm px-3 py-1.5 min-h-[36px] focus-ring"
+              className="btn-secondary text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 min-h-[36px] focus-ring"
               title="Export current view to CSV"
             >
               <Download className="w-3.5 h-3.5" />
@@ -241,7 +243,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             </button>
             <button
               onClick={onOpenQuickAdd}
-              className="btn-primary text-xs sm:text-sm px-3.5 py-1.5 min-h-[36px] focus-ring"
+              className="btn-primary text-xs sm:text-sm px-3 sm:px-3.5 py-1.5 min-h-[36px] focus-ring"
               title="Record transaction with natural language"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -250,77 +252,98 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           </div>
         </div>
 
-        {/* 2. Three Compact Transaction Summary Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 min-w-0 pt-1">
+        {/* 2. Compact Transaction Summary Metrics (High density responsive grid) */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 min-w-0 pt-0.5 sm:pt-1">
           {/* Metric 1: Count */}
-          <div className="card-base p-4 sm:p-4.5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
-                Transaction Volume
+          <div className="card-base p-2 sm:p-4.5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
+                <span className="hidden sm:inline">Transaction </span>Volume
               </span>
-              <div className="w-7 h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <Receipt className="w-4 h-4" />
+              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
+                <Receipt className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="space-y-1 my-2 min-w-0">
-              <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
-                {filteredCount} <span className="font-sans font-normal text-xs sm:text-sm text-ledger-inkMuted">entries</span>
+            <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
+              <div className="font-serif text-sm sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate">
+                {filteredCount}{" "}
+                <span className="font-sans font-normal text-[10px] sm:text-xs md:text-sm text-ledger-inkMuted">
+                  <span className="sm:hidden">txs</span>
+                  <span className="hidden sm:inline">entries</span>
+                </span>
               </div>
-              <div className="text-[11px] text-ledger-inkSubtle truncate">
-                {isFiltered
-                  ? `Showing ${filteredCount} of ${totalCount} recorded`
-                  : `${totalCount} total in active ledger`}
+              <div className="text-[10px] sm:text-[11px] text-ledger-inkSubtle truncate">
+                <span className="sm:hidden">
+                  {isFiltered ? `of ${totalCount} rec.` : "active ledger"}
+                </span>
+                <span className="hidden sm:inline">
+                  {isFiltered
+                    ? `Showing ${filteredCount} of ${totalCount} recorded`
+                    : `${totalCount} total in active ledger`}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Metric 2: Inflow */}
-          <div className="card-base p-4 sm:p-4.5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
-                Total Inflow
+          <div className="card-base p-2 sm:p-4.5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
+                <span className="hidden sm:inline">Total </span>Inflow
               </span>
-              <div className="w-7 h-7 rounded-md bg-ledger-sageLight text-ledger-sage flex items-center justify-center border border-ledger-sage/20 shrink-0">
-                <ArrowUpRight className="w-4 h-4" />
+              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-md bg-ledger-sageLight text-ledger-sage flex items-center justify-center border border-ledger-sage/20 shrink-0">
+                <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="space-y-1 my-2 min-w-0">
-              <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-sage tracking-tight tabular-nums break-words">
-                {formatINR(filteredInflowPaise)}
+            <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
+              <div className="font-serif text-sm sm:text-2xl lg:text-3xl font-bold text-ledger-sage tracking-tight tabular-nums truncate">
+                <span className="sm:hidden">{formatINR(filteredInflowPaise, { showPaise: false })}</span>
+                <span className="hidden sm:inline">{formatINR(filteredInflowPaise)}</span>
               </div>
-              <div className="text-[11px] text-ledger-inkSubtle truncate">
-                {isFiltered
-                  ? `Filtered from ${formatINR(totalInflowPaise)} total`
-                  : "Salary, dividends & deposits"}
+              <div className="text-[10px] sm:text-[11px] text-ledger-inkSubtle truncate">
+                <span className="sm:hidden">
+                  {isFiltered ? "filtered" : "credits"}
+                </span>
+                <span className="hidden sm:inline">
+                  {isFiltered
+                    ? `Filtered from ${formatINR(totalInflowPaise)} total`
+                    : "Salary, dividends & deposits"}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Metric 3: Outflow */}
-          <div className="card-base p-4 sm:p-4.5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
-                Total Outflow
+          <div className="card-base p-2 sm:p-4.5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
+                <span className="hidden sm:inline">Total </span>Outflow
               </span>
-              <div className="w-7 h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <ArrowDownRight className="w-4 h-4" />
+              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
+                <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="space-y-1 my-2 min-w-0">
-              <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
-                {formatINR(filteredOutflowPaise)}
+            <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
+              <div className="font-serif text-sm sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate">
+                <span className="sm:hidden">{formatINR(filteredOutflowPaise, { showPaise: false })}</span>
+                <span className="hidden sm:inline">{formatINR(filteredOutflowPaise)}</span>
               </div>
-              <div className="text-[11px] text-ledger-inkSubtle truncate">
-                {isFiltered
-                  ? `Filtered from ${formatINR(totalOutflowPaise)} total`
-                  : "Total expenses & debits"}
+              <div className="text-[10px] sm:text-[11px] text-ledger-inkSubtle truncate">
+                <span className="sm:hidden">
+                  {isFiltered ? "filtered" : "debits"}
+                </span>
+                <span className="hidden sm:inline">
+                  {isFiltered
+                    ? `Filtered from ${formatINR(totalOutflowPaise)} total`
+                    : "Total expenses & debits"}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* 3. Search and Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-2 min-w-0">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 sm:gap-2.5 pt-1 sm:pt-2 min-w-0">
           {/* Search Box */}
           <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-ledger-inkSubtle" />
@@ -342,53 +365,55 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             )}
           </div>
 
-          {/* Type Segmented Control */}
-          <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5 shrink-0 select-none">
-            {(["all", "expense", "income"] as const).map((kind) => {
-              const isActive = selectedKind === kind;
-              const label = kind === "all" ? "All" : kind === "expense" ? "Expenses" : "Income";
-              return (
-                <button
-                  key={kind}
-                  onClick={() => handleKindChange(kind)}
-                  className={`px-2.5 sm:px-3 py-1 rounded text-xs font-medium transition-all ${
-                    isActive
-                      ? "bg-ledger-ink text-white shadow-hairline"
-                      : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surface"
-                  } focus-ring`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0 shrink-0">
+            {/* Type Segmented Control */}
+            <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5 shrink-0 select-none">
+              {(["all", "expense", "income"] as const).map((kind) => {
+                const isActive = selectedKind === kind;
+                const label = kind === "all" ? "All" : kind === "expense" ? "Expenses" : "Income";
+                return (
+                  <button
+                    key={kind}
+                    onClick={() => handleKindChange(kind)}
+                    className={`px-2 sm:px-3 py-1 rounded text-xs font-medium transition-all ${
+                      isActive
+                        ? "bg-ledger-ink text-white shadow-hairline"
+                        : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surface"
+                    } focus-ring`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Category Dropdown */}
-          <div className="shrink-0 min-w-[140px]">
-            <select
-              value={selectedCat}
-              onChange={(e) => handleCatChange(e.target.value)}
-              className="input-base text-xs sm:text-sm py-1.5"
-              aria-label="Filter by category"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Category Dropdown */}
+            <div className="flex-1 md:w-[150px] min-w-0">
+              <select
+                value={selectedCat}
+                onChange={(e) => handleCatChange(e.target.value)}
+                className="input-base text-xs sm:text-sm py-1.5"
+                aria-label="Filter by category"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Reset Filters Button */}
-          {isFiltered && (
-            <button
-              onClick={resetFilters}
-              className="text-xs text-ledger-teal hover:text-ledger-tealHover font-medium px-2 py-1 rounded focus-ring shrink-0 self-center"
-            >
-              Reset
-            </button>
-          )}
+            {/* Reset Filters Button */}
+            {isFiltered && (
+              <button
+                onClick={resetFilters}
+                className="text-xs text-ledger-teal hover:text-ledger-tealHover font-medium px-2 py-1 rounded focus-ring shrink-0"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
