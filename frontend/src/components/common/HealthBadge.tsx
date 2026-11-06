@@ -13,7 +13,7 @@ export const HealthBadge: React.FC = () => {
   const isHealthy = data?.status === "healthy";
 
   return (
-    <div className="flex items-center gap-1.5 select-none">
+    <div className="hidden sm:flex items-center gap-1.5 select-none shrink-0">
       <div
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-ledger-border bg-ledger-surfaceSubtle text-[11px] font-mono text-ledger-inkMuted"
         title={isHealthy ? "PostgreSQL / SQLite database connected" : "Connecting to database..."}
@@ -28,7 +28,7 @@ export const HealthBadge: React.FC = () => {
       </div>
 
       <div
-        className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded border border-ledger-border bg-ledger-surfaceSubtle text-[11px] font-mono text-ledger-inkMuted"
+        className="hidden 2xl:inline-flex items-center gap-1 px-2 py-1 rounded border border-ledger-border bg-ledger-surfaceSubtle text-[11px] font-mono text-ledger-inkMuted"
         title="Zero-Budget Fallback: Hosted Gemini -> Local Ollama -> Deterministic Engine"
       >
         <ShieldCheck className="w-3 h-3 text-ledger-teal" />

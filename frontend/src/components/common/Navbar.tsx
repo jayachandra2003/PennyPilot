@@ -31,17 +31,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
     <>
       {/* Desktop & Tablet Institutional Top Bar */}
       <header className="sticky top-0 z-40 bg-ledger-surface/95 backdrop-blur-md border-b border-ledger-border px-4 sm:px-6 lg:px-8 py-2.5">
-        <div className="max-w-ledger mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="max-w-ledger mx-auto flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <a
               href="/"
-              className="flex items-center gap-2 group focus-ring rounded-md"
+              className="flex items-center gap-2 group focus-ring rounded-md shrink-0"
               aria-label="PennyPilot home"
             >
               <div className="w-7 h-7 rounded-md bg-ledger-teal flex items-center justify-center text-white shadow-subtle shrink-0">
                 <span className="font-serif font-bold text-base leading-none">P</span>
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center min-w-0">
                 <span className="font-serif font-semibold text-base sm:text-lg tracking-tight text-ledger-ink group-hover:text-ledger-teal transition-colors">
                   PennyPilot
                 </span>
@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
 
             {/* Desktop Navigation Links */}
             <nav
-              className="hidden md:flex items-center gap-1.5 ml-4 pl-4 border-l border-ledger-borderSubtle"
+              className="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-ledger-borderSubtle shrink-0"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                     key={item.id}
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => onSelectTab(item.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                       isActive
                         ? "bg-ledger-ink text-white shadow-hairline"
                         : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle"
@@ -78,10 +78,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             </nav>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Currency Indicator (₹ INR) */}
             <div
-              className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded border border-ledger-borderSubtle bg-ledger-surfaceSubtle text-[11px] font-mono text-ledger-inkMuted select-none"
+              className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded border border-ledger-borderSubtle bg-ledger-surfaceSubtle text-[11px] font-mono text-ledger-inkMuted select-none shrink-0"
               title="Active ledger currency: Indian Rupee (INR, integer-paise precision)"
               aria-label="Active currency Indian Rupee"
             >
@@ -95,19 +95,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             {/* Quick Add CTA */}
             <button
               onClick={() => onSelectTab("quick_add")}
-              className="btn-primary focus-ring"
+              className="btn-primary min-h-[36px] px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm focus-ring shrink-0"
               title="Record transaction"
               aria-label="Record transaction"
             >
               <Plus className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Quick Add</span>
-              <span className="sm:hidden">Add</span>
+              <span className="sm:hidden font-medium">Add</span>
             </button>
 
             {/* User Identity Presentation */}
             {user ? (
               <div
-                className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-md border border-ledger-borderSubtle bg-ledger-surfaceSubtle/60 text-xs"
+                className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-1 py-1 rounded-md border border-ledger-borderSubtle bg-ledger-surfaceSubtle/60 text-xs shrink-0"
                 title={`Signed in as ${user.display_name || user.email}`}
               >
                 <div
@@ -116,17 +116,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                 >
                   {getUserInitials(user.display_name, user.email)}
                 </div>
-                <div className="flex flex-col text-left leading-tight hidden lg:block">
-                  <span className="font-medium text-ledger-ink text-[11px] truncate max-w-[110px]">
+                <div className="flex flex-col text-left leading-tight hidden xl:block">
+                  <span className="font-medium text-ledger-ink text-[11px] truncate max-w-[100px]">
                     {user.display_name || "Aarav Sharma"}
-                  </span>
-                  <span className="text-[9px] font-mono text-ledger-inkSubtle truncate max-w-[110px]">
-                    {user.email}
                   </span>
                 </div>
                 <button
                   onClick={logout}
-                  className="p-1 rounded text-ledger-inkSubtle hover:text-ledger-red hover:bg-ledger-surface transition-colors focus-ring"
+                  className="p-1 min-w-[32px] min-h-[32px] flex items-center justify-center rounded text-ledger-inkSubtle hover:text-ledger-red hover:bg-ledger-surface transition-colors focus-ring"
                   title="Sign out"
                   aria-label="Sign out"
                 >
@@ -136,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             ) : (
               <button
                 onClick={() => loginDemo()}
-                className="btn-secondary text-xs px-2.5 py-1 min-h-[32px] focus-ring"
+                className="btn-secondary text-xs px-2.5 py-1 min-h-[32px] focus-ring shrink-0"
                 title="Sign in with demo account"
               >
                 Sign In

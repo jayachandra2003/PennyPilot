@@ -67,77 +67,102 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   };
 
   return (
-    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-5 md:p-6 space-y-4">
+    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
       {/* Top Controller Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ledger-borderSubtle pb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
           {/* Month Switcher */}
-          <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5">
+          <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5 shrink-0">
             <button
               onClick={handlePrevMonth}
               aria-label="Previous month"
-              className="p-1.5 rounded hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink transition-colors focus-ring"
+              className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink transition-colors focus-ring"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-3 text-xs sm:text-sm font-semibold text-ledger-ink select-none font-mono">
+            <span className="px-2.5 sm:px-3 text-xs sm:text-sm font-semibold text-ledger-ink select-none font-mono">
               {monthLabel}
             </span>
             <button
               onClick={handleNextMonth}
               aria-label="Next month"
-              className="p-1.5 rounded hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink transition-colors focus-ring"
+              className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink transition-colors focus-ring"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <span className="text-[11px] font-mono text-ledger-inkSubtle hidden sm:inline">
+          <span className="text-[11px] font-mono text-ledger-inkSubtle hidden md:inline shrink-0">
             Monthly Ledger
           </span>
         </div>
 
         {/* Right Action & Status Group */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 min-w-0">
           {getPaceBadge()}
           <button
             onClick={onQuickAdd}
-            className="btn-primary text-xs sm:text-sm focus-ring"
+            className="btn-primary text-xs sm:text-sm px-3 py-1.5 min-h-[36px] focus-ring shrink-0"
             title="Record transaction with natural language"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Quick Add Expense</span>
+            <span>Quick Add</span>
           </button>
         </div>
       </div>
 
       {/* Main Computed Monthly Verdict Display */}
-      <div className="space-y-1.5">
+      <div className="space-y-2.5 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold flex items-center gap-1">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-ledger-teal" />
             <span>Computed Monthly Verdict</span>
           </span>
         </div>
-        <div className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-ledger-ink tracking-tight leading-snug">
-          {pace ? (
-            <span>
-              <span className="text-ledger-ink">{formatINR(totalExpensePaise)}</span> spent,{" "}
-              <span className="text-ledger-inkMuted">{formatINR(pace.remaining_paise)}</span> remaining.{" "}
-              <span
-                className={
-                  pace.is_over_budget || pace.status === "over_pace"
-                    ? "text-ledger-amber"
-                    : "text-ledger-sage"
-                }
-              >
-                {pace.verdict_sentence}
-              </span>
-            </span>
-          ) : (
-            <span>{formatINR(totalExpensePaise)} spent in {monthLabel}.</span>
+
+        {/* Primary Figures: Amount Spent and Remaining Buffer */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+          <div className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
+            {formatINR(totalExpensePaise)} <span className="font-sans font-normal text-xs sm:text-sm text-ledger-inkMuted uppercase tracking-wider">spent</span>
+          </div>
+          {pace && (
+            <>
+              <span className="text-ledger-inkSubtle hidden sm:inline">•</span>
+              <div className="font-serif text-base sm:text-lg md:text-xl font-semibold text-ledger-teal tracking-tight tabular-nums break-words">
+                {formatINR(pace.remaining_paise)} <span className="font-sans font-normal text-xs text-ledger-inkSubtle uppercase tracking-wider">remaining</span>
+              </div>
+            </>
           )}
         </div>
-        <p className="text-xs text-ledger-inkMuted">
+
+        {/* Structured Controlled Status / Projection Callout */}
+        {pace && (
+          <div
+            className={`flex items-start gap-2.5 p-3 rounded-md border text-xs sm:text-sm leading-relaxed min-w-0 break-words ${
+              pace.is_over_budget || pace.status === "over_pace"
+                ? "bg-amber-50/80 border-amber-200/80 text-amber-950"
+                : pace.status === "caution"
+                ? "bg-amber-50/50 border-amber-200/60 text-amber-900"
+                : "bg-emerald-50/80 border-emerald-200/80 text-emerald-950"
+            }`}
+          >
+            <div className="shrink-0 mt-0.5">
+              {pace.is_over_budget || pace.status === "over_pace" ? (
+                <AlertCircle className="w-4 h-4 text-amber-700" />
+              ) : pace.status === "caution" ? (
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-medium">
+                {pace.verdict_sentence}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <p className="text-[11px] sm:text-xs text-ledger-inkMuted">
           Pure deterministic Python integer paise arithmetic. Zero LLM calculations.
         </p>
       </div>

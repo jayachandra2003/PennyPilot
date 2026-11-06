@@ -12,8 +12,8 @@ export const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
   totalExpensePaise,
 }) => {
   return (
-    <div className="card-base p-5 md:p-6 space-y-4">
-      <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3">
+    <div className="card-base p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
+      <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3 min-w-0">
         <div>
           <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
             Spending Analysis
@@ -40,8 +40,8 @@ export const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
             return (
               <div key={cat.category_id} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-ledger-ink">{cat.category_name}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-ledger-ink truncate">{cat.category_name}</span>
                     <span className="text-[11px] font-mono text-ledger-inkSubtle">
                       ({cat.transaction_count} txs)
                     </span>

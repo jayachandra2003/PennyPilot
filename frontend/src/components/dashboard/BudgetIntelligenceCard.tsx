@@ -101,9 +101,9 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
   const utilization = pace?.utilization_percent ?? (totalBudgetPaise > 0 ? (spentPaise / totalBudgetPaise) * 100 : 0);
 
   return (
-    <div className="card-base p-5 md:p-6 space-y-5">
+    <div className="card-base p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5 min-w-0 overflow-hidden">
       {/* Header & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ledger-borderSubtle pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
         <div>
           <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
             Budget Intelligence
@@ -114,7 +114,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-mono shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-1 bg-ledger-teal rounded-full" />
             <span className="font-medium text-ledger-ink">Actual Spend</span>
@@ -127,47 +127,47 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
       </div>
 
       {/* 4 Budget Metrics Summary Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-ledger-surfaceSubtle border border-ledger-borderSubtle rounded-md p-3.5">
-        <div className="space-y-0.5">
-          <span className="text-[11px] font-mono uppercase text-ledger-inkSubtle">Budget Limit</span>
-          <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 bg-ledger-surfaceSubtle border border-ledger-borderSubtle rounded-md p-2.5 sm:p-3.5 min-w-0">
+        <div className="space-y-0.5 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Budget Limit</span>
+          <div className="font-serif text-sm sm:text-base md:text-lg font-bold text-ledger-ink tabular-nums truncate">
             {formatINR(totalBudgetPaise)}
           </div>
-          <span className="text-[10px] text-ledger-inkSubtle">8 active categories</span>
+          <span className="text-[10px] text-ledger-inkSubtle block truncate">8 active categories</span>
         </div>
 
-        <div className="space-y-0.5">
-          <span className="text-[11px] font-mono uppercase text-ledger-inkSubtle">Amount Spent</span>
-          <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums">
+        <div className="space-y-0.5 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Amount Spent</span>
+          <div className="font-serif text-sm sm:text-base md:text-lg font-bold text-ledger-ink tabular-nums truncate">
             {formatINR(spentPaise)}
           </div>
-          <span className="text-[10px] text-ledger-inkSubtle">{utilization.toFixed(1)}% of limit</span>
+          <span className="text-[10px] text-ledger-inkSubtle block truncate">{utilization.toFixed(1)}% of limit</span>
         </div>
 
-        <div className="space-y-0.5">
-          <span className="text-[11px] font-mono uppercase text-ledger-inkSubtle">Remaining</span>
-          <div className="font-serif text-base sm:text-lg font-bold text-ledger-teal tabular-nums">
+        <div className="space-y-0.5 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Remaining</span>
+          <div className="font-serif text-sm sm:text-base md:text-lg font-bold text-ledger-teal tabular-nums truncate">
             {formatINR(remainingPaise)}
           </div>
-          <span className="text-[10px] text-ledger-inkSubtle">Available buffer</span>
+          <span className="text-[10px] text-ledger-inkSubtle block truncate">Available buffer</span>
         </div>
 
-        <div className="space-y-0.5">
-          <span className="text-[11px] font-mono uppercase text-ledger-inkSubtle">Spending Pace</span>
-          <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums">
+        <div className="space-y-0.5 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Spending Pace</span>
+          <div className="font-serif text-sm sm:text-base md:text-lg font-bold text-ledger-ink tabular-nums truncate">
             Day {currentDay} of {totalDays}
           </div>
-          <span className="text-[10px] text-ledger-inkSubtle capitalize">
+          <span className="text-[10px] text-ledger-inkSubtle capitalize block truncate">
             Status: {pace?.status?.replace("_", " ") || "Calculating"}
           </span>
         </div>
       </div>
 
-      {/* SVG Budget Pace Chart */}
-      <div className="relative w-full aspect-[28/11] min-h-[200px]">
+      {/* SVG Budget Pace Chart (Vertically efficient & strictly contained) */}
+      <div className="relative w-full h-[180px] sm:h-[210px] md:h-[230px] overflow-hidden select-none">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full overflow-visible select-none"
+          className="w-full h-full select-none"
         >
           <defs>
             <linearGradient id="budgetAreaGradient" x1="0" y1="0" x2="0" y2="1">

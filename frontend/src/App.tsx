@@ -118,12 +118,12 @@ function MainDashboard() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-6 space-y-5 md:space-y-6 pb-28 md:pb-10 focus:outline-none"
+        className="flex-1 max-w-ledger w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-5 md:py-6 space-y-4 sm:space-y-5 md:space-y-6 pb-28 md:pb-10 focus:outline-none min-w-0 overflow-x-hidden"
         aria-label="Main financial ledger content"
       >
         {/* TAB 1: EXECUTIVE DASHBOARD */}
         {currentTab === "dashboard" && (
-          <div className="space-y-5 md:space-y-6 animate-fade-in">
+          <div className="space-y-4 sm:space-y-5 md:space-y-6 animate-fade-in min-w-0">
             {/* 1. Dashboard Header: Month Controller & Computed Verdict */}
             <DashboardHeader
               year={selectedYear}
@@ -136,11 +136,11 @@ function MainDashboard() {
 
             {/* 2. Four Prominent Financial KPI Panels */}
             {isSummaryLoading && !summary ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className="card-base p-5 h-28 animate-pulse bg-ledger-surfaceSubtle border-ledger-borderSubtle"
+                    className="card-base p-4 sm:p-5 h-28 animate-pulse bg-ledger-surfaceSubtle border-ledger-borderSubtle"
                   />
                 ))}
               </div>
@@ -158,7 +158,7 @@ function MainDashboard() {
             />
 
             {/* 4. Two-Column Analytics Grid: Category Breakdown + Recent Financial Transactions */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6 min-w-0">
               <CategoryBreakdownCard
                 categories={summary?.category_breakdown || []}
                 totalExpensePaise={summary?.expense_paise || 0}

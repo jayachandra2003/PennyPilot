@@ -18,9 +18,9 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
   const isDisciplinedSavings = savingsRate >= 25.0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
       {/* 1. Monthly Income */}
-      <div className="card-base p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark">
+      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
             Monthly Income
@@ -29,23 +29,23 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
             <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2">
-          <div className="font-serif text-2xl sm:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums">
+        <div className="space-y-1 my-2 min-w-0">
+          <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
             {formatINR(incomePaise)}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
+          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
             <span className="inline-flex items-center text-ledger-sage font-medium">
               <TrendingUp className="w-3 h-3 mr-0.5" />
               <span>Inflow</span>
             </span>
             <span>•</span>
-            <span>Salary & deposits</span>
+            <span className="truncate">Salary & deposits</span>
           </div>
         </div>
       </div>
 
       {/* 2. Monthly Expenses */}
-      <div className="card-base p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark">
+      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
             Monthly Expenses
@@ -54,23 +54,23 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
             <ArrowDownRight className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2">
-          <div className="font-serif text-2xl sm:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums">
+        <div className="space-y-1 my-2 min-w-0">
+          <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
             {formatINR(expensePaise)}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
+          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
             <span className="inline-flex items-center text-ledger-inkMuted font-medium">
               <TrendingDown className="w-3 h-3 mr-0.5" />
               <span>Outflow</span>
             </span>
             <span>•</span>
-            <span>{transactionCount} transactions</span>
+            <span className="truncate">{transactionCount} transactions</span>
           </div>
         </div>
       </div>
 
       {/* 3. Net Cash Flow */}
-      <div className="card-base p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark">
+      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
             Net Cash Flow
@@ -85,15 +85,15 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
             <Wallet className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2">
+        <div className="space-y-1 my-2 min-w-0">
           <div
-            className={`font-serif text-2xl sm:text-3xl font-bold tracking-tight tabular-nums ${
+            className={`font-serif text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight tabular-nums break-words ${
               isNetPositive ? "text-ledger-teal" : "text-ledger-red"
             }`}
           >
             {formatINR(netBalancePaise)}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
+          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
             <span
               className={`font-medium ${
                 isNetPositive ? "text-ledger-teal" : "text-ledger-red"
@@ -102,13 +102,13 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
               {isNetPositive ? "Net Positive" : "Deficit"}
             </span>
             <span>•</span>
-            <span>Retained surplus</span>
+            <span className="truncate">Retained surplus</span>
           </div>
         </div>
       </div>
 
       {/* 4. Savings Rate */}
-      <div className="card-base p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark">
+      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
             Savings Rate
@@ -123,11 +123,11 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
             <PiggyBank className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2">
-          <div className="font-serif text-2xl sm:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums">
+        <div className="space-y-1 my-2 min-w-0">
+          <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
             {savingsRate.toFixed(2)}%
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
+          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
             <span
               className={`font-medium ${
                 isDisciplinedSavings ? "text-ledger-sage" : "text-ledger-amber"
@@ -136,7 +136,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
               {isDisciplinedSavings ? "Disciplined" : "Below Baseline"}
             </span>
             <span>•</span>
-            <span>Target: &gt; 25%</span>
+            <span className="truncate">Target: &gt; 25%</span>
           </div>
         </div>
       </div>

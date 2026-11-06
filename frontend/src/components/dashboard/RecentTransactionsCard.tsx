@@ -15,7 +15,7 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
   onQuickAdd,
 }) => {
   return (
-    <div className="card-base p-5 md:p-6 space-y-4">
+    <div className="card-base p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3">
         <div>
@@ -57,100 +57,154 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
           </button>
         </div>
       ) : (
-        <div className="overflow-x-auto -mx-5 px-5 md:-mx-6 md:px-6">
-          <table className="w-full text-left border-collapse min-w-[500px]">
-            <thead>
-              <tr className="border-b border-ledger-borderSubtle text-[11px] font-mono uppercase tracking-wider text-ledger-inkSubtle">
-                <th className="py-2 font-medium">Merchant / Note</th>
-                <th className="py-2 font-medium">Category</th>
-                <th className="py-2 font-medium">Date</th>
-                <th className="py-2 font-medium">Type</th>
-                <th className="py-2 font-medium text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ledger-borderSubtle text-xs">
-              {transactions.slice(0, 5).map((t) => {
-                const isExpense = t.kind === "expense";
-                return (
-                  <tr
-                    key={t.id}
-                    className="hover:bg-ledger-surfaceHover/80 transition-colors group"
-                  >
-                    {/* Merchant / Description */}
-                    <td className="py-2.5 pr-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-6 h-6 rounded flex items-center justify-center shrink-0 text-xs font-semibold ${
-                            isExpense
-                              ? "bg-ledger-surfaceSubtle text-ledger-inkMuted border border-ledger-borderSubtle"
-                              : "bg-ledger-sageLight text-ledger-sage border border-ledger-sage/20"
-                          }`}
-                        >
-                          {isExpense ? (
-                            <ArrowDownRight className="w-3.5 h-3.5" />
-                          ) : (
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          )}
-                        </div>
-                        <div className="truncate max-w-[180px]">
-                          <span className="font-medium text-ledger-ink block truncate">
-                            {t.merchant || t.description}
-                          </span>
-                          {t.merchant && t.description && t.merchant !== t.description && (
-                            <span className="text-[10px] text-ledger-inkSubtle block truncate">
-                              {t.description}
-                            </span>
-                          )}
-                        </div>
+        <>
+          {/* Mobile Ledger List View (< sm, strictly zero overflow) */}
+          <div className="block sm:hidden divide-y divide-ledger-borderSubtle">
+            {transactions.slice(0, 5).map((t) => {
+              const isExpense = t.kind === "expense";
+              return (
+                <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className={`w-7 h-7 rounded flex items-center justify-center shrink-0 text-xs font-semibold ${
+                        isExpense
+                          ? "bg-ledger-surfaceSubtle text-ledger-inkMuted border border-ledger-borderSubtle"
+                          : "bg-ledger-sageLight text-ledger-sage border border-ledger-sage/20"
+                      }`}
+                    >
+                      {isExpense ? (
+                        <ArrowDownRight className="w-3.5 h-3.5" />
+                      ) : (
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-ledger-ink text-xs truncate">
+                          {t.merchant || t.description}
+                        </span>
                         {t.source === "nl" && (
                           <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-ledger-tealLight text-ledger-teal shrink-0"
+                            className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[8px] font-mono font-medium bg-ledger-tealLight text-ledger-teal shrink-0"
                             title="Parsed with Natural Language"
                           >
-                            <Sparkles className="w-2.5 h-2.5" />
-                            <span>NL</span>
+                            NL
                           </span>
                         )}
                       </div>
-                    </td>
+                      <div className="flex items-center gap-1.5 text-[10px] text-ledger-inkSubtle">
+                        <span className="truncate">{t.category_name || "General"}</span>
+                        <span>•</span>
+                        <span className="font-mono shrink-0">{t.occurred_on}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right font-mono font-semibold text-xs tabular-nums whitespace-nowrap shrink-0">
+                    <span className={isExpense ? "text-ledger-ink" : "text-ledger-sage"}>
+                      {isExpense ? `-${formatINR(t.amount_paise)}` : `+${formatINR(t.amount_paise)}`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-                    {/* Category */}
-                    <td className="py-2.5 pr-3">
-                      <span className="badge-tag">
-                        {t.category_name || "General"}
-                      </span>
-                    </td>
+          {/* Desktop & Tablet Institutional Table (>= sm) */}
+          <div className="hidden sm:block overflow-x-auto max-w-full">
+            <table className="w-full text-left border-collapse min-w-[500px]">
+              <thead>
+                <tr className="border-b border-ledger-borderSubtle text-[11px] font-mono uppercase tracking-wider text-ledger-inkSubtle">
+                  <th className="py-2 font-medium">Merchant / Note</th>
+                  <th className="py-2 font-medium">Category</th>
+                  <th className="py-2 font-medium">Date</th>
+                  <th className="py-2 font-medium">Type</th>
+                  <th className="py-2 font-medium text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-ledger-borderSubtle text-xs">
+                {transactions.slice(0, 5).map((t) => {
+                  const isExpense = t.kind === "expense";
+                  return (
+                    <tr
+                      key={t.id}
+                      className="hover:bg-ledger-surfaceHover/80 transition-colors group"
+                    >
+                      {/* Merchant / Description */}
+                      <td className="py-2.5 pr-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-6 h-6 rounded flex items-center justify-center shrink-0 text-xs font-semibold ${
+                              isExpense
+                                ? "bg-ledger-surfaceSubtle text-ledger-inkMuted border border-ledger-borderSubtle"
+                                : "bg-ledger-sageLight text-ledger-sage border border-ledger-sage/20"
+                            }`}
+                          >
+                            {isExpense ? (
+                              <ArrowDownRight className="w-3.5 h-3.5" />
+                            ) : (
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            )}
+                          </div>
+                          <div className="truncate max-w-[180px]">
+                            <span className="font-medium text-ledger-ink block truncate">
+                              {t.merchant || t.description}
+                            </span>
+                            {t.merchant && t.description && t.merchant !== t.description && (
+                              <span className="text-[10px] text-ledger-inkSubtle block truncate">
+                                {t.description}
+                              </span>
+                            )}
+                          </div>
+                          {t.source === "nl" && (
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-ledger-tealLight text-ledger-teal shrink-0"
+                              title="Parsed with Natural Language"
+                            >
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>NL</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Date */}
-                    <td className="py-2.5 pr-3 font-mono text-[11px] text-ledger-inkSubtle whitespace-nowrap">
-                      {t.occurred_on}
-                    </td>
+                      {/* Category */}
+                      <td className="py-2.5 pr-3">
+                        <span className="badge-tag">
+                          {t.category_name || "General"}
+                        </span>
+                      </td>
 
-                    {/* Transaction Type */}
-                    <td className="py-2.5 pr-3">
-                      <span
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider ${
-                          isExpense
-                            ? "text-ledger-inkMuted bg-ledger-surfaceSubtle"
-                            : "text-ledger-sage bg-ledger-sageLight"
-                        }`}
-                      >
-                        {isExpense ? "Expense" : "Income"}
-                      </span>
-                    </td>
+                      {/* Date */}
+                      <td className="py-2.5 pr-3 font-mono text-[11px] text-ledger-inkSubtle whitespace-nowrap">
+                        {t.occurred_on}
+                      </td>
 
-                    {/* Amount */}
-                    <td className="py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap">
-                      <span className={isExpense ? "text-ledger-ink" : "text-ledger-sage"}>
-                        {isExpense ? `-${formatINR(t.amount_paise)}` : `+${formatINR(t.amount_paise)}`}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      {/* Transaction Type */}
+                      <td className="py-2.5 pr-3">
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider ${
+                            isExpense
+                              ? "text-ledger-inkMuted bg-ledger-surfaceSubtle"
+                              : "text-ledger-sage bg-ledger-sageLight"
+                          }`}
+                        >
+                          {isExpense ? "Expense" : "Income"}
+                        </span>
+                      </td>
+
+                      {/* Amount */}
+                      <td className="py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap">
+                        <span className={isExpense ? "text-ledger-ink" : "text-ledger-sage"}>
+                          {isExpense ? `-${formatINR(t.amount_paise)}` : `+${formatINR(t.amount_paise)}`}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

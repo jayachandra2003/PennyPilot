@@ -83,7 +83,7 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 min-w-0">
         {cards.slice(0, 3).map((c) => {
           const Icon = c.icon;
           const isWarning = c.severity === "warning";
@@ -92,7 +92,7 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
           return (
             <div
               key={c.id}
-              className={`card-base p-5 flex flex-col justify-between space-y-3 transition-colors ${
+              className={`card-base p-4 sm:p-5 flex flex-col justify-between space-y-3 transition-colors min-w-0 overflow-hidden ${
                 isWarning
                   ? "border-ledger-amber/40 bg-ledger-surface"
                   : isPositive
