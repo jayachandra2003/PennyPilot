@@ -125,7 +125,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
         </div>
         <div className="space-y-1 my-2">
           <div className="font-serif text-2xl sm:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums">
-            {savingsRate.toFixed(1)}%
+            {savingsRate.toFixed(2)}%
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle">
             <span

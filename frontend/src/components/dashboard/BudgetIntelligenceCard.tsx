@@ -22,12 +22,16 @@ interface BudgetIntelligenceCardProps {
 }
 
 export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
-  totalBudgetPaise,
-  totalDays,
-  currentDay,
+  totalBudgetPaise: totalBudgetProp,
+  totalDays: totalDaysProp,
+  currentDay: currentDayProp,
   pace,
   transactions,
 }) => {
+  const totalDays = pace?.total_days ?? totalDaysProp;
+  const currentDay = pace?.elapsed_days ?? currentDayProp;
+  const totalBudgetPaise = pace?.limit_paise ?? totalBudgetProp;
+
   // Aggregate daily expenses from Day 1 to totalDays
   const dailySpend: Record<number, number> = {};
   for (const t of transactions) {

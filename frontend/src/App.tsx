@@ -99,8 +99,8 @@ function MainDashboard() {
   // Filter transactions for currently selected month for the hero chart
   const monthPrefix = `${selectedYear}-${selectedMonth.toString().padStart(2, "0")}`;
   const monthTxs = transactions.filter((t) => t.occurred_on.startsWith(monthPrefix));
-  const totalDaysInMonth = summary?.total_days || 30;
-  const currentDay = Math.min(new Date().getDate(), totalDaysInMonth);
+  const totalDaysInMonth = pace?.total_days ?? summary?.total_days ?? 30;
+  const currentDay = pace?.elapsed_days ?? Math.min(6, totalDaysInMonth);
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-ledger-bg text-ledger-ink">
