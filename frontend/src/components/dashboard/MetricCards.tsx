@@ -18,124 +18,124 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
   const isDisciplinedSavings = savingsRate >= 25.0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 min-w-0">
       {/* 1. Monthly Income */}
-      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Monthly Income
           </span>
-          <div className="w-7 h-7 rounded-md bg-ledger-sageLight text-ledger-sage flex items-center justify-center border border-ledger-sage/20 shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shrink-0">
             <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2 min-w-0">
-          <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
+        <div className="space-y-1.5 my-2 min-w-0">
+          <div className="font-sans text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight tabular-nums break-words">
             {formatINR(incomePaise)}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
-            <span className="inline-flex items-center text-ledger-sage font-medium">
-              <TrendingUp className="w-3 h-3 mr-0.5" />
-              <span>Inflow</span>
+          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Inflow
             </span>
-            <span>•</span>
             <span className="truncate">Salary & deposits</span>
           </div>
         </div>
       </div>
 
       {/* 2. Monthly Expenses */}
-      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Monthly Expenses
           </span>
-          <div className="w-7 h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 shrink-0">
             <ArrowDownRight className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2 min-w-0">
-          <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
+        <div className="space-y-1.5 my-2 min-w-0">
+          <div className="font-sans text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight tabular-nums break-words">
             {formatINR(expensePaise)}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
-            <span className="inline-flex items-center text-ledger-inkMuted font-medium">
-              <TrendingDown className="w-3 h-3 mr-0.5" />
-              <span>Outflow</span>
+          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+              <TrendingDown className="w-3 h-3 mr-1" />
+              Outflow
             </span>
-            <span>•</span>
             <span className="truncate">{transactionCount} transactions</span>
           </div>
         </div>
       </div>
 
       {/* 3. Net Cash Flow */}
-      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Net Cash Flow
           </span>
           <div
-            className={`w-7 h-7 rounded-md flex items-center justify-center border shrink-0 ${
+            className={`w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 ${
               isNetPositive
-                ? "bg-ledger-tealLight text-ledger-teal border-ledger-teal/20"
-                : "bg-ledger-redLight text-ledger-red border-ledger-red/20"
+                ? "bg-teal-50 text-teal-700 border-teal-100"
+                : "bg-rose-50 text-rose-600 border-rose-100"
             }`}
           >
             <Wallet className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2 min-w-0">
+        <div className="space-y-1.5 my-2 min-w-0">
           <div
-            className={`font-serif text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight tabular-nums break-words ${
-              isNetPositive ? "text-ledger-teal" : "text-ledger-red"
+            className={`font-sans text-2xl lg:text-3xl font-bold tracking-tight tabular-nums break-words ${
+              isNetPositive ? "text-slate-900" : "text-rose-600"
             }`}
           >
             {formatINR(netBalancePaise)}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
+          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
             <span
-              className={`font-medium ${
-                isNetPositive ? "text-ledger-teal" : "text-ledger-red"
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                isNetPositive
+                  ? "bg-teal-50 text-teal-700 border-teal-100"
+                  : "bg-rose-50 text-rose-700 border-rose-100"
               }`}
             >
-              {isNetPositive ? "Net Positive" : "Deficit"}
+              {isNetPositive ? "+ Surplus" : "- Deficit"}
             </span>
-            <span>•</span>
-            <span className="truncate">Retained surplus</span>
+            <span className="truncate">Retained balance</span>
           </div>
         </div>
       </div>
 
       {/* 4. Savings Rate */}
-      <div className="card-base p-4 sm:p-5 flex flex-col justify-between transition-all hover:border-ledger-borderDark min-w-0">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all min-w-0">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Savings Rate
           </span>
           <div
-            className={`w-7 h-7 rounded-md flex items-center justify-center border shrink-0 ${
+            className={`w-9 h-9 rounded-lg flex items-center justify-center border shrink-0 ${
               isDisciplinedSavings
-                ? "bg-ledger-sageLight text-ledger-sage border-ledger-sage/20"
-                : "bg-ledger-amberLight text-ledger-amber border-ledger-amber/20"
+                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                : "bg-amber-50 text-amber-600 border-amber-100"
             }`}
           >
             <PiggyBank className="w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-1 my-2 min-w-0">
-          <div className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums break-words">
+        <div className="space-y-1.5 my-2 min-w-0">
+          <div className="font-sans text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight tabular-nums break-words">
             {savingsRate.toFixed(2)}%
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-ledger-inkSubtle truncate">
+          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
             <span
-              className={`font-medium ${
-                isDisciplinedSavings ? "text-ledger-sage" : "text-ledger-amber"
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                isDisciplinedSavings
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                  : "bg-amber-50 text-amber-700 border-amber-100"
               }`}
             >
-              {isDisciplinedSavings ? "Disciplined" : "Below Baseline"}
+              {isDisciplinedSavings ? "Disciplined" : "Below 25% Target"}
             </span>
-            <span>•</span>
             <span className="truncate">Target: &gt; 25%</span>
           </div>
         </div>

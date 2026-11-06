@@ -38,22 +38,22 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
               className="flex items-center gap-2 group focus-ring rounded-md shrink-0"
               aria-label="PennyPilot home"
             >
-              <div className="w-7 h-7 rounded-md bg-ledger-teal flex items-center justify-center text-white shadow-subtle shrink-0">
-                <span className="font-serif font-bold text-base leading-none">P</span>
+              <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm shrink-0">
+                <span className="font-sans font-bold text-sm leading-none">P</span>
               </div>
               <div className="flex items-center min-w-0">
-                <span className="font-serif font-semibold text-base sm:text-lg tracking-tight text-ledger-ink group-hover:text-ledger-teal transition-colors">
+                <span className="font-sans font-bold text-base sm:text-lg tracking-tight text-ledger-ink group-hover:text-slate-700 transition-colors">
                   PennyPilot
                 </span>
-                <span className="hidden sm:inline-block ml-2 text-[9px] font-mono tracking-widest uppercase text-ledger-inkMuted bg-ledger-surfaceSubtle px-1.5 py-0.5 rounded border border-ledger-borderSubtle">
-                  Quiet Ledger
+                <span className="hidden sm:inline-block ml-2 text-[9px] font-medium tracking-wider uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                  Fintech
                 </span>
               </div>
             </a>
 
             {/* Desktop Navigation Links */}
             <nav
-              className="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-ledger-borderSubtle shrink-0"
+              className="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-ledger-border shrink-0"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
@@ -64,10 +64,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                     key={item.id}
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => onSelectTab(item.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       isActive
-                        ? "bg-ledger-ink text-white shadow-hairline"
-                        : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     } focus-ring`}
                   >
                     <Icon className="w-3.5 h-3.5" aria-hidden="true" />

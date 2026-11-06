@@ -4,20 +4,20 @@
 
 @layer base {
   :root {
-    --canvas-bg: #F7F5F0;
+    --canvas-bg: #F8FAFC;
     --surface-card: #FFFFFF;
-    --surface-subtle: #FAF9F6;
-    --surface-hover: #F5F3ED;
-    --border-hairline: #E5E0D8;
-    --border-subtle: #EFECE6;
-    --border-dark: #D5CFC3;
-    --ink-primary: #121417;
-    --ink-secondary: #4A515A;
-    --ink-tertiary: #7D848F;
-    --ink-faint: #A4ABB5;
+    --surface-subtle: #F1F5F9;
+    --surface-hover: #F8FAFC;
+    --border-hairline: #E2E8F0;
+    --border-subtle: #F1F5F9;
+    --border-dark: #CBD5E1;
+    --ink-primary: #0F172A;
+    --ink-secondary: #475569;
+    --ink-tertiary: #64748B;
+    --ink-faint: #94A3B8;
     --brand-teal: #0F766E;
-    --brand-teal-hover: #0D635C;
-    --brand-teal-light: #EAF4F2;
+    --brand-teal-hover: #115E59;
+    --brand-teal-light: #F0FDFA;
   }
 
   html {
@@ -32,32 +32,32 @@
 }
 
 @layer components {
-  /* Institutional Button Foundations */
+  /* Modern Fintech Button Foundations */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-md text-xs sm:text-sm font-medium bg-ledger-teal text-white hover:bg-ledger-tealHover active:translate-y-px transition-colors shadow-subtle select-none;
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-lg text-xs sm:text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 active:translate-y-px transition-all shadow-sm select-none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-md text-xs sm:text-sm font-medium border border-ledger-border bg-ledger-surface text-ledger-ink hover:bg-ledger-surfaceHover hover:border-ledger-borderDark active:translate-y-px transition-colors shadow-subtle select-none;
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-lg text-xs sm:text-sm font-medium border border-ledger-border bg-white text-ledger-ink hover:bg-ledger-surfaceSubtle hover:border-ledger-borderDark active:translate-y-px transition-all shadow-sm select-none;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 min-h-[36px] rounded-md text-xs sm:text-sm font-medium text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle transition-colors select-none;
+    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 min-h-[36px] rounded-lg text-xs sm:text-sm font-medium text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle transition-colors select-none;
   }
 
-  /* Institutional Input & Select Foundations */
+  /* Modern Input & Select Foundations */
   .input-base {
-    @apply w-full px-3 py-2 min-h-[36px] rounded-md border border-ledger-border bg-ledger-surfaceSubtle text-xs sm:text-sm text-ledger-ink placeholder:text-ledger-inkFaint hover:border-ledger-borderDark focus:bg-ledger-surface transition-colors;
+    @apply w-full px-3 py-2 min-h-[36px] rounded-lg border border-ledger-border bg-white text-xs sm:text-sm text-ledger-ink placeholder:text-ledger-inkFaint hover:border-ledger-borderDark focus:border-ledger-teal focus:ring-1 focus:ring-ledger-teal transition-colors;
   }
 
-  /* Editorial Card Foundation */
+  /* Modern Card Foundation */
   .card-base {
-    @apply bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-5 space-y-4;
+    @apply bg-ledger-surface border border-ledger-border rounded-xl shadow-card p-5 space-y-4;
   }
 
-  /* Structured Micro-Badge Foundation */
+  /* Modern Micro-Badge Foundation */
   .badge-tag {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono tracking-wider uppercase border border-ledger-borderSubtle bg-ledger-surfaceSubtle text-ledger-inkMuted;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium tracking-wide uppercase border border-ledger-border bg-ledger-surfaceSubtle text-ledger-inkMuted;
   }
 }
 

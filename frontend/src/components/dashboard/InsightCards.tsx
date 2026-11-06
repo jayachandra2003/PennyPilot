@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, Clock, ShieldCheck, ArrowRight } from "lucide-react";
+import { AlertTriangle, Clock, ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
 import type { AnomalyItem, BudgetPace, MonthlySummary } from "../../lib/api";
 import { formatINR } from "../../lib/currency";
 
@@ -71,15 +71,16 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
-            Intelligence
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            AI Signals
           </span>
-          <h3 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
-            Grounded Financial Signals
+          <h3 className="font-sans text-lg sm:text-xl font-bold text-slate-900">
+            Financial Intelligence
           </h3>
         </div>
-        <span className="text-xs font-mono text-ledger-inkSubtle">
-          Evidence-verified Python models
+        <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+          <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+          <span>Verified FactBundle</span>
         </span>
       </div>
 
@@ -92,40 +93,40 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
           return (
             <div
               key={c.id}
-              className={`card-base p-4 sm:p-5 flex flex-col justify-between space-y-3 transition-colors min-w-0 overflow-hidden ${
+              className={`bg-white border rounded-xl shadow-sm p-4 sm:p-5 flex flex-col justify-between space-y-3 transition-colors min-w-0 overflow-hidden ${
                 isWarning
-                  ? "border-ledger-amber/40 bg-ledger-surface"
+                  ? "border-amber-200"
                   : isPositive
-                  ? "border-ledger-sage/40 bg-ledger-surface"
-                  : "border-ledger-border bg-ledger-surface"
+                  ? "border-emerald-200"
+                  : "border-slate-200"
               }`}
             >
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <div
-                    className={`w-7 h-7 rounded flex items-center justify-center shrink-0 border ${
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
                       isWarning
-                        ? "bg-ledger-amberLight text-ledger-amber border-ledger-amber/30"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
                         : isPositive
-                        ? "bg-ledger-sageLight text-ledger-sage border-ledger-sage/30"
-                        : "bg-ledger-tealLight text-ledger-teal border-ledger-teal/30"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-teal-50 text-teal-700 border-teal-200"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-ledger-ink line-clamp-1">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1">
                     {c.title}
                   </h4>
                 </div>
-                <p className="text-xs text-ledger-inkMuted leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   {c.evidence}
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-ledger-borderSubtle flex justify-end">
+              <div className="pt-2 border-t border-slate-100 flex justify-end">
                 <button
                   onClick={c.action}
-                  className="text-xs font-medium text-ledger-teal hover:text-ledger-tealHover flex items-center gap-1 focus-ring py-0.5 px-1 rounded"
+                  className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1 focus-ring py-0.5 px-1 rounded-md"
                 >
                   <span>{c.actionLabel}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
