@@ -5,8 +5,9 @@ import { OfflineBanner } from "./components/common/OfflineBanner";
 import { NotFound } from "./components/common/NotFound";
 import { ToastProvider, useToast } from "./components/common/Toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { VerdictStrip } from "./components/dashboard/VerdictStrip";
-import { BudgetPaceHeroChart } from "./components/dashboard/BudgetPaceHeroChart";
+import { DashboardHeader } from "./components/dashboard/DashboardHeader";
+import { MetricCards } from "./components/dashboard/MetricCards";
+import { BudgetIntelligenceCard } from "./components/dashboard/BudgetIntelligenceCard";
 import { CategoryBreakdownCard } from "./components/dashboard/CategoryBreakdownCard";
 import { RecentTransactionsCard } from "./components/dashboard/RecentTransactionsCard";
 import { InsightCards } from "./components/dashboard/InsightCards";
@@ -120,33 +121,56 @@ function MainDashboard() {
         className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-6 space-y-5 md:space-y-6 pb-28 md:pb-10 focus:outline-none"
         aria-label="Main financial ledger content"
       >
-        {/* TAB 1: DASHBOARD */}
+        {/* TAB 1: EXECUTIVE DASHBOARD */}
         {currentTab === "dashboard" && (
-          <div className="space-y-6 md:space-y-8 animate-fade-in">
-            {/* 1. Verdict Strip (Headline & 4 Core KPIs) */}
+          <div className="space-y-5 md:space-y-6 animate-fade-in">
+            {/* 1. Dashboard Header: Month Controller & Computed Verdict */}
+            <DashboardHeader
+              year={selectedYear}
+              month={selectedMonth}
+              pace={pace}
+              totalExpensePaise={summary?.expense_paise || 0}
+              onMonthChange={handleMonthChange}
+              onQuickAdd={() => setIsQuickAddOpen(true)}
+            />
+
+            {/* 2. Four Prominent Financial KPI Panels */}
             {isSummaryLoading && !summary ? (
-              <div className="p-8 text-center bg-ledger-surface rounded-2xl border border-ledger-border text-ledger-inkMuted text-xs animate-pulse">
-                Loading financial overview for {selectedMonth}/{selectedYear}...
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="card-base p-5 h-28 animate-pulse bg-ledger-surfaceSubtle border-ledger-borderSubtle"
+                  />
+                ))}
               </div>
             ) : (
-              <VerdictStrip
-                year={selectedYear}
-                month={selectedMonth}
-                summary={summary}
-                pace={pace}
-                onMonthChange={handleMonthChange}
-              />
+              <MetricCards summary={summary} />
             )}
 
-            {/* 2. Signature "Quiet Ledger" Hero Chart */}
-            <BudgetPaceHeroChart
-              totalBudgetPaise={budgetsOverview?.total_limit_paise || 5000000}
+            {/* 3. Budget Intelligence & Spending Pace Hero Chart */}
+            <BudgetIntelligenceCard
+              totalBudgetPaise={budgetsOverview?.total_limit_paise || 5500000}
               totalDays={totalDaysInMonth}
               currentDay={currentDay}
+              pace={pace}
               transactions={monthTxs}
             />
 
-            {/* 3. Grounded Insight Cards (Pace, Anomaly, Savings) */}
+            {/* 4. Two-Column Analytics Grid: Category Breakdown + Recent Financial Transactions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
+              <CategoryBreakdownCard
+                categories={summary?.category_breakdown || []}
+                totalExpensePaise={summary?.expense_paise || 0}
+              />
+              <RecentTransactionsCard
+                transactions={monthTxs.length > 0 ? monthTxs : transactions}
+                onViewAll={() => setCurrentTab("transactions")}
+                onQuickAdd={() => setIsQuickAddOpen(true)}
+              />
+            </div>
+
+            {/* 5. Grounded Financial Insights & Signals */}
             <InsightCards
               pace={pace}
               anomalies={anomalyData?.anomalies || []}
@@ -154,19 +178,6 @@ function MainDashboard() {
               onNavigateToBudgets={() => setCurrentTab("budgets")}
               onNavigateToTransactions={() => setCurrentTab("transactions")}
             />
-
-            {/* 4. Two-Column Grid: Category Breakdown + Recent Transactions */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <CategoryBreakdownCard
-                categories={summary?.category_breakdown || []}
-                totalExpensePaise={summary?.expense_paise || 0}
-              />
-              <RecentTransactionsCard
-                transactions={transactions}
-                onViewAll={() => setCurrentTab("transactions")}
-                onQuickAdd={() => setIsQuickAddOpen(true)}
-              />
-            </div>
           </div>
         )}
 

@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
 
             {/* Desktop Navigation Links */}
             <nav
-              className="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-ledger-borderSubtle"
+              className="hidden md:flex items-center gap-1.5 ml-4 pl-4 border-l border-ledger-borderSubtle"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
@@ -64,10 +64,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                     key={item.id}
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => onSelectTab(item.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       isActive
-                        ? "bg-ledger-surfaceSubtle text-ledger-ink font-semibold border border-ledger-borderSubtle"
-                        : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle/60"
+                        ? "bg-ledger-ink text-white shadow-hairline"
+                        : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle"
                     } focus-ring`}
                   >
                     <Icon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -163,12 +163,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                 onClick={() => onSelectTab(item.id)}
                 className={`flex flex-col items-center justify-center gap-1 min-h-[44px] py-1 transition-colors focus-ring ${
                   isActive
-                    ? "text-ledger-teal font-semibold"
+                    ? "text-ledger-ink font-semibold"
                     : "text-ledger-inkMuted hover:text-ledger-ink"
                 }`}
               >
                 <Icon className="w-4 h-4" aria-hidden="true" />
                 <span className="text-[10px] font-medium leading-none">{item.label}</span>
+                {isActive && <span className="w-1 h-1 rounded-full bg-ledger-ink mt-0.5" />}
               </button>
             );
           })}

@@ -27,21 +27,21 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
       id: "pace",
       title: isOver ? "Budget Pace Warning" : "Budget Pace On Track",
       evidence: pace.verdict_sentence,
-      severity: isOver ? "warning" : "positive",
+      severity: isOver ? ("warning" as const) : ("positive" as const),
       icon: Clock,
       actionLabel: "Adjust Budgets",
       action: onNavigateToBudgets,
     });
   }
 
-  // 2. Anomaly Spike Insight (MAD Engine)
+  // 2. Anomaly Spike Insight (Median Absolute Deviation Engine)
   if (anomalies.length > 0) {
     const top = anomalies[0];
     cards.push({
       id: "anomaly",
       title: `Statistical Outlier Detected: ${top.description}`,
       evidence: top.evidence,
-      severity: "warning",
+      severity: "warning" as const,
       icon: AlertTriangle,
       actionLabel: "View in Ledger",
       action: onNavigateToTransactions,
@@ -56,9 +56,9 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
       id: "savings",
       title: isGood ? "Strong Savings Discipline" : "Savings Rate Below Target",
       evidence: isGood
-        ? `You have saved ${rate}% (${formatINR(summary.net_balance_paise)}) of your monthly income so far.`
+        ? `You have preserved ${rate}% (${formatINR(summary.net_balance_paise)}) of your monthly income so far.`
         : `Current savings rate is ${rate}%, below your recommended 25% target baseline.`,
-      severity: isGood ? "positive" : "info",
+      severity: isGood ? ("positive" as const) : ("info" as const),
       icon: ShieldCheck,
       actionLabel: "Explore Trends",
       action: onNavigateToTransactions,
@@ -70,10 +70,17 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-serif text-lg font-bold text-ledger-ink">
-          Grounded Financial Signals
-        </h3>
-        <span className="text-xs text-ledger-inkSubtle">Calculated with evidence</span>
+        <div>
+          <span className="text-xs font-medium text-ledger-inkMuted uppercase tracking-wider">
+            Intelligence
+          </span>
+          <h3 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
+            Grounded Financial Signals
+          </h3>
+        </div>
+        <span className="text-xs font-mono text-ledger-inkSubtle">
+          Evidence-verified Python models
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -85,36 +92,40 @@ export const InsightCards: React.FC<InsightCardsProps> = ({
           return (
             <div
               key={c.id}
-              className={`p-5 rounded-2xl border flex flex-col justify-between space-y-3 bg-ledger-surface shadow-card transition-all ${
+              className={`card-base p-5 flex flex-col justify-between space-y-3 transition-colors ${
                 isWarning
-                  ? "border-ledger-amber/40 bg-gradient-to-br from-ledger-surface to-ledger-amberLight/20"
+                  ? "border-ledger-amber/40 bg-ledger-surface"
                   : isPositive
-                  ? "border-ledger-sage/40 bg-gradient-to-br from-ledger-surface to-ledger-sageLight/20"
+                  ? "border-ledger-sage/40 bg-ledger-surface"
                   : "border-ledger-border bg-ledger-surface"
               }`}
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    className={`w-7 h-7 rounded flex items-center justify-center shrink-0 border ${
                       isWarning
-                        ? "bg-ledger-amberLight text-ledger-amber"
+                        ? "bg-ledger-amberLight text-ledger-amber border-ledger-amber/30"
                         : isPositive
-                        ? "bg-ledger-sageLight text-ledger-sage"
-                        : "bg-ledger-tealLight text-ledger-teal"
+                        ? "bg-ledger-sageLight text-ledger-sage border-ledger-sage/30"
+                        : "bg-ledger-tealLight text-ledger-teal border-ledger-teal/30"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  <h4 className="text-xs md:text-sm font-bold text-ledger-ink line-clamp-1">{c.title}</h4>
+                  <h4 className="text-xs sm:text-sm font-semibold text-ledger-ink line-clamp-1">
+                    {c.title}
+                  </h4>
                 </div>
-                <p className="text-xs text-ledger-inkMuted leading-relaxed">{c.evidence}</p>
+                <p className="text-xs text-ledger-inkMuted leading-relaxed">
+                  {c.evidence}
+                </p>
               </div>
 
               <div className="pt-2 border-t border-ledger-borderSubtle flex justify-end">
                 <button
                   onClick={c.action}
-                  className="text-xs font-semibold text-ledger-teal hover:underline flex items-center gap-1 focus-ring"
+                  className="text-xs font-medium text-ledger-teal hover:text-ledger-tealHover flex items-center gap-1 focus-ring py-0.5 px-1 rounded"
                 >
                   <span>{c.actionLabel}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
