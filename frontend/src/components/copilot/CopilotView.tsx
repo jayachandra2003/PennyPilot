@@ -129,9 +129,9 @@ export const CopilotView: React.FC<CopilotViewProps> = ({ year, month }) => {
   const providerPillText = aiStatus?.display_name || "Ollama Qwen 2.5:3B (Local)";
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto animate-fade-in pb-12">
+    <div className="space-y-3.5 max-w-4xl mx-auto animate-fade-in pb-6">
       {/* 1. Top Bar: Provider Status & Intelligence Report Action */}
-      <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100 shrink-0">
@@ -142,7 +142,7 @@ export const CopilotView: React.FC<CopilotViewProps> = ({ year, month }) => {
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Zero-Hallucination: Pure deterministic Python arithmetic verified before presentation.
+            Responses grounded in verified financial records computed in pure Python before explanation.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export const CopilotView: React.FC<CopilotViewProps> = ({ year, month }) => {
       </div>
 
       {/* 2. Suggested Prompt Chips */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
           Suggested Inquiries
         </span>
@@ -194,9 +194,9 @@ export const CopilotView: React.FC<CopilotViewProps> = ({ year, month }) => {
       </div>
 
       {/* 3. Conversation Stream */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[520px] overflow-hidden">
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col ${messages.length <= 1 ? "h-[360px] sm:h-[400px]" : "h-[450px] sm:h-[490px]"} transition-all duration-300 overflow-hidden`}>
         {/* Messages List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -296,7 +296,7 @@ export const CopilotView: React.FC<CopilotViewProps> = ({ year, month }) => {
             </button>
           </form>
           <div className="mt-2 text-[10px] text-slate-400 text-center">
-            Zero Financial Hallucination Guarantee: Answers strictly cite verified backend ledger figures.
+            Responses grounded in verified financial records.
           </div>
         </div>
       </div>
