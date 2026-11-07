@@ -39,6 +39,10 @@ def seed():
                 timezone="Asia/Kolkata",
                 currency="INR",
             )
+            user.email_verified = True
+            user.onboarding_completed = True
+            user.tutorial_completed = True
+            user.monthly_savings_target_paise = rupees_to_paise(25000)
             db.add(user)
             db.flush()
         else:

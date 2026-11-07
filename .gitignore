@@ -19,8 +19,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
+!frontend/src/lib/
 parts/
 sdist/
 var/
@@ -86,3 +87,6 @@ tmp/
 # Diagnostic Audit Reports & Session Artifacts (Contain test credentials/emails)
 PENNYPILOT_*.md
 PHASE_5*.md
+screenshots/
+artifacts/
+
