@@ -36,12 +36,18 @@ async def lifespan(app: FastAPI):
     if parsed_url.get_backend_name() == "sqlite" and parsed_url.database and parsed_url.database != ":memory:":
         db_file = Path(parsed_url.database)
         if not db_file.exists():
-            error_msg = (
-                f"Configured SQLite database file not found at '{db_file}'. "
-                "Automatic creation of an empty database is prohibited in development to prevent data loss."
-            )
-            logger.error(error_msg)
-            raise FileNotFoundError(error_msg)
+            if settings.ENVIRONMENT == "production":
+                # In production (e.g. Render Persistent Disk /var/data/penny_pilot.db), ensure directory and file exist
+                logger.info(f"Production SQLite database not found at '{db_file}'. Initializing persistent storage.")
+                db_file.parent.mkdir(parents=True, exist_ok=True)
+                db_file.touch(exist_ok=True)
+            else:
+                error_msg = (
+                    f"Configured SQLite database file not found at '{db_file}'. "
+                    "Automatic creation of an empty database is prohibited in development to prevent data loss."
+                )
+                logger.error(error_msg)
+                raise FileNotFoundError(error_msg)
 
     # Verify database connectivity
     try:

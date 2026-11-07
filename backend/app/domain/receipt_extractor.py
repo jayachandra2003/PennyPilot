@@ -159,6 +159,10 @@ def extract_raw_text(file_bytes: bytes, ext: str) -> Tuple[str, str, List[str]]:
                 width, height = rgb_img.size
                 if width < 50 or height < 50:
                     warnings.append("Low-resolution image; manual review recommended.")
+                # Prevent OOM on memory-constrained servers (e.g. Render 512MB RAM) by bounding max dimension to 2000px
+                if max(width, height) > 2000:
+                    resample_mode = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+                    rgb_img.thumbnail((2000, 2000), resample_mode)
                 img_array = np.array(rgb_img)
         except Exception as e:
             raise BadRequestException(
@@ -250,7 +254,7 @@ def parse_receipt_text(text: str, categories: List[Dict[str, Any]]) -> Dict[str,
     # 1. Total Amount Extraction
     amount_paise: Optional[int] = None
     total_patterns = [
-        re.compile(r"(?:grand\s*total|net\s*total|final\s*amount|bill\s*amount|total\s*amount|amount\s*paid|paid\s*amount|total\s*due)\s*[:\-\=]?\s*(?:₹|inr|rs\.?|rs|\?)?\s*([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE),
+        re.compile(r"(?:grand\s*total|net\s*total|net\s*amount|final\s*amount|bill\s*amount|total\s*amount|amount\s*paid|paid\s*amount|total\s*due)\s*[:\-\=]?\s*(?:₹|inr|rs\.?|rs|\?)?\s*([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE),
         re.compile(r"^total\s*[:\-\=]?\s*(?:₹|inr|rs\.?|rs|\?)?\s*([\d,]+(?:\.\d{1,2})?)$", re.IGNORECASE),
         re.compile(r"(?:^|\s)total[\s\:\=\-\?₹rs\.]*([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE),
     ]

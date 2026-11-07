@@ -462,19 +462,12 @@ class IntentClassifier:
         ]):
             return "top_category", None
 
-        # 11. Total Spending
-        if any(w in q for w in [
-            "how much did i spend this month", "how much did i spend", "total expenses",
-            "what are my total expenses", "how much spent", "what did i spend",
-        ]):
-            return "financial_spending", None
-
-        # 12. Specific Category Spend
+        # 11. Specific Category Spend (Checked before general total spending)
         for cat in categories:
             cat_name = cat["name"].lower()
             if cat_name in q:
                 return "category_spend", cat["name"]
-        
+
         # Check synonyms
         synonyms = {
             "food": "Dining & Food",
@@ -500,6 +493,13 @@ class IntentClassifier:
         for kw, mapped_cat in synonyms.items():
             if re.search(rf"\b{kw}\b", q):
                 return "category_spend", mapped_cat
+
+        # 12. Total Spending (When no specific category or synonym is targeted)
+        if any(w in q for w in [
+            "how much did i spend this month", "how much did i spend", "total expenses",
+            "what are my total expenses", "how much spent", "what did i spend",
+        ]):
+            return "financial_spending", None
 
         return "general_summary", None
 

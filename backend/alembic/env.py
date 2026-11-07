@@ -21,6 +21,13 @@ target_metadata = Base.metadata
 
 # Override URL with environment settings (prefer explicit DATABASE_URL env var if set)
 db_url = os.environ.get("DATABASE_URL") or settings.DATABASE_URL
+if db_url.startswith("sqlite:///"):
+    from sqlalchemy.engine.url import make_url
+    from pathlib import Path
+    parsed_sqlite = make_url(db_url)
+    if parsed_sqlite.database and parsed_sqlite.database != ":memory:":
+        Path(parsed_sqlite.database).parent.mkdir(parents=True, exist_ok=True)
+
 config.set_main_option("sqlalchemy.url", db_url)
 
 

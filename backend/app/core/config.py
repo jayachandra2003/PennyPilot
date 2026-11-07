@@ -160,7 +160,7 @@ class Settings(BaseSettings):
             or self.BACKEND_BASE_URL.startswith("https://")
             or self.GOOGLE_REDIRECT_URI.startswith("https://")
         )
-        if self.ENVIRONMENT == "production" or is_https:
+        if self.ENVIRONMENT == "production" or is_https or (self.COOKIE_SAMESITE and self.COOKIE_SAMESITE.lower() == "none"):
             self.COOKIE_SECURE = True
 
         return self
