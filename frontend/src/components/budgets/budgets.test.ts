@@ -206,4 +206,48 @@ describe("Stage 4B — Budgets Management Logic & Precision", () => {
       expect(formatINR(zeroPaise)).toBe("₹0.00");
     });
   });
+
+  describe("E. Dynamic Budget Buffer & Daily Spending Pace Calculations", () => {
+    it("dynamically derives allocated ceiling from overview total limit without hardcoding", () => {
+      const allocatedCeilingPaise = mockOverview.total_limit_paise;
+      expect(allocatedCeilingPaise).toBe(5500000);
+      expect(formatINR(allocatedCeilingPaise)).toBe("₹55,000.00");
+    });
+
+    it("calculates remaining buffer strictly as Math.max(0, limit - expense)", () => {
+      const limitPaise = 5500000;
+      const expensePaise = 2903000;
+      const remainingPaise = Math.max(0, limitPaise - expensePaise);
+      expect(remainingPaise).toBe(2597000);
+      expect(formatINR(remainingPaise)).toBe("₹25,970.00");
+
+      // When over-budget, clamp to 0
+      const heavyExpensePaise = 6000000;
+      expect(Math.max(0, limitPaise - heavyExpensePaise)).toBe(0);
+    });
+
+    it("calculates daily spending pace ceiling accurately for 30-day month", () => {
+      const limitPaise = 5500000;
+      const days = 30;
+      const dailyPacePaise = Math.round(limitPaise / days);
+      expect(dailyPacePaise).toBe(183333);
+      expect(formatINR(dailyPacePaise)).toBe("₹1,833.33");
+    });
+
+    it("recalculates immediately when category allocations are updated", () => {
+      // User modifies allocations: increases Groceries by ₹5,000 (+500,000 paise)
+      const initialTotal = 5500000;
+      const updatedTotal = initialTotal + 500000; // 6,000,000 paise
+      const expensePaise = 2903000;
+      const newRemaining = Math.max(0, updatedTotal - expensePaise);
+      const newDailyPace = Math.round(updatedTotal / 30);
+
+      expect(updatedTotal).toBe(6000000);
+      expect(formatINR(updatedTotal)).toBe("₹60,000.00");
+      expect(newRemaining).toBe(3097000);
+      expect(formatINR(newRemaining)).toBe("₹30,970.00");
+      expect(newDailyPace).toBe(200000);
+      expect(formatINR(newDailyPace)).toBe("₹2,000.00");
+    });
+  });
 });

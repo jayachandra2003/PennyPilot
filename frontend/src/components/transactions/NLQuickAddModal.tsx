@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sparkles,
@@ -7,15 +7,27 @@ import {
   Trash2,
   Check,
   ArrowRight,
+  Camera,
+  Paperclip,
+  RotateCcw,
+  FileText,
+  AlertCircle,
+  Loader2,
+  CheckCircle2,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import type { CategoryItem, ParsedDraftItem } from "../../lib/api";
+import type { CategoryItem, ParsedDraftItem, ReceiptExtractResponse } from "../../lib/api";
 import {
   bulkCreateTransactions,
   createTransaction,
+  extractReceipt,
   parseNaturalLanguage,
 } from "../../lib/api";
 import { formatINR, paiseToRupees, rupeesToPaise } from "../../lib/currency";
 import { useToast } from "../common/Toast";
+import { GlassIcon } from "../common/GlassIcon";
 
 interface NLQuickAddModalProps {
   isOpen: boolean;
@@ -24,7 +36,7 @@ interface NLQuickAddModalProps {
 }
 
 export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClose, categories }) => {
-  const [mode, setMode] = useState<"nl" | "manual">("nl");
+  const [mode, setMode] = useState<"nl" | "manual" | "camera" | "receipt_review">("nl");
   const [nlText, setNlText] = useState("");
   const [drafts, setDrafts] = useState<ParsedDraftItem[]>([]);
   const [isReviewed, setIsReviewed] = useState(false);
@@ -36,10 +48,173 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [manualKind, setManualKind] = useState<"expense" | "income">("expense");
 
+  // Camera capture state
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+
+  // File input refs
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraFallbackInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Receipt review state
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [receiptDraft, setReceiptDraft] = useState<{
+    file_id: string;
+    file_name: string;
+    file_size: number;
+    merchant: string;
+    amount_rupees: string;
+    date: string;
+    category_id: string;
+    description: string;
+    kind: "expense" | "income";
+    notes: string;
+    confidence_score: number;
+    warnings: string[];
+    line_items: Array<{ name: string; amount_paise: number }>;
+  } | null>(null);
+  const [showLineItems, setShowLineItems] = useState(false);
+
   const effectiveCatId = manualCatId || (categories.length > 0 ? categories[0].id : "");
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Stop camera tracks cleanly
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // Cleanup camera stream on unmount or close
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+      if (capturedPhotoUrl) {
+        URL.revokeObjectURL(capturedPhotoUrl);
+      }
+    };
+  }, [capturedPhotoUrl]);
+
+  // Start device camera
+  const startCamera = async () => {
+    setCapturedPhotoUrl(null);
+    setCapturedFile(null);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast("Web camera not supported in this browser. Please attach a photo instead.", "info");
+      cameraFallbackInputRef.current?.click();
+      return;
+    }
+
+    try {
+      setMode("camera");
+      // Prefer rear camera on mobile devices
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (err: any) {
+      stopCameraStream();
+      toast("Camera permission denied or camera unavailable. Please upload a receipt file.", "info");
+      // Trigger fallback file picker
+      cameraFallbackInputRef.current?.click();
+      setMode("nl");
+    }
+  };
+
+  // Capture frame from active video stream
+  const captureFrame = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    stopCameraStream();
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const photoUrl = URL.createObjectURL(blob);
+        const file = new File([blob], `receipt_${Date.now()}.jpg`, { type: "image/jpeg" });
+        setCapturedPhotoUrl(photoUrl);
+        setCapturedFile(file);
+      },
+      "image/jpeg",
+      0.92
+    );
+  };
+
+  // Process uploaded or captured receipt file
+  const handleProcessReceipt = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast("Receipt file exceeds maximum 5MB limit. Please select a smaller file.", "error");
+      return;
+    }
+
+    setIsExtracting(true);
+    try {
+      const data: ReceiptExtractResponse = await extractReceipt(file);
+
+      // Determine best category ID
+      let matchedCatId = data.suggested_category_id;
+      if (!matchedCatId || !categories.some((c) => c.id === matchedCatId)) {
+        matchedCatId = categories.length > 0 ? categories[0].id : "";
+      }
+
+      setReceiptDraft({
+        file_id: data.file_id,
+        file_name: data.file_name,
+        file_size: data.file_size,
+        merchant: data.merchant || "",
+        amount_rupees: data.amount_paise ? paiseToRupees(data.amount_paise).toString() : "",
+        date: data.date || new Date().toISOString().split("T")[0],
+        category_id: matchedCatId,
+        description: data.description || data.merchant || "Receipt Expense",
+        kind: "expense",
+        notes: data.notes || `Receipt scan: ${data.file_name}`,
+        confidence_score: data.confidence_score,
+        warnings: data.warnings,
+        line_items: data.line_items || [],
+      });
+
+      setMode("receipt_review");
+      toast("Receipt details extracted! Please review and confirm before saving.", "success");
+    } catch (err: any) {
+      toast(err.message || "Failed to process receipt file.", "error");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleProcessReceipt(file);
+    }
+    // Reset input so same file can be re-selected if needed
+    e.target.value = "";
+  };
 
   // Parse NL text mutation
   const parseMutation = useMutation({
@@ -49,7 +224,6 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
         toast("No financial amounts detected. Try typing: '₹120 milk today'", "info");
         return;
       }
-      // Match category IDs if missing
       const enrichedDrafts = data.drafts.map((d) => {
         let catId = d.category_id;
         if (!catId) {
@@ -85,8 +259,8 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
     },
   });
 
-  // Manual save mutation
-  const manualSaveMutation = useMutation({
+  // Manual & Receipt save mutation
+  const saveTransactionMutation = useMutation({
     mutationFn: createTransaction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -94,7 +268,7 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
       queryClient.invalidateQueries({ queryKey: ["budgetPace"] });
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
       queryClient.invalidateQueries({ queryKey: ["anomalies"] });
-      toast("Transaction recorded in ledger", "success");
+      toast("Transaction verified and recorded in ledger", "success");
       handleClose();
     },
     onError: (err: any) => {
@@ -103,11 +277,19 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
   });
 
   const handleClose = () => {
+    stopCameraStream();
+    if (capturedPhotoUrl) {
+      URL.revokeObjectURL(capturedPhotoUrl);
+      setCapturedPhotoUrl(null);
+    }
+    setCapturedFile(null);
+    setReceiptDraft(null);
     setNlText("");
     setDrafts([]);
     setIsReviewed(false);
     setManualAmount("");
     setManualDesc("");
+    setMode("nl");
     onClose();
   };
 
@@ -163,7 +345,7 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
       toast("Please enter a description", "error");
       return;
     }
-    manualSaveMutation.mutate({
+    saveTransactionMutation.mutate({
       category_id: effectiveCatId,
       kind: manualKind,
       amount_paise: paise,
@@ -173,48 +355,108 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
     });
   };
 
+  const handleReceiptReviewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!receiptDraft) return;
+
+    const paise = rupeesToPaise(Number(receiptDraft.amount_rupees));
+    if (!paise || paise <= 0) {
+      toast("Please specify a valid total amount in Rupees", "error");
+      return;
+    }
+    if (!receiptDraft.description.trim()) {
+      toast("Please provide a description or merchant name", "error");
+      return;
+    }
+
+    saveTransactionMutation.mutate({
+      category_id: receiptDraft.category_id,
+      kind: receiptDraft.kind,
+      amount_paise: paise,
+      occurred_on: receiptDraft.date,
+      description: receiptDraft.description.trim(),
+      merchant: receiptDraft.merchant.trim() || undefined,
+      note: receiptDraft.notes.trim() || undefined,
+      source: "manual",
+    });
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ledger-ink/40 backdrop-blur-sm animate-fade-in">
-      <div className="bg-ledger-surface max-w-2xl w-full rounded-2xl border border-ledger-border shadow-float overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header with Mode Toggle */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-[#121C28] backdrop-blur-2xl max-w-2xl w-full rounded-3xl border border-ledger-border shadow-float overflow-hidden flex flex-col max-h-[92vh]">
+        {/* Hidden File Inputs */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInputChange}
+          accept=".pdf,.png,.jpg,.jpeg,.webp,.docx"
+          className="hidden"
+        />
+        <input
+          type="file"
+          ref={cameraFallbackInputRef}
+          onChange={handleFileInputChange}
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+        />
+
+        {/* Header with Mode Toggle & Action Title */}
         <div className="flex items-center justify-between p-5 border-b border-ledger-border bg-ledger-surfaceSubtle">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-ledger-tealLight text-ledger-teal flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
-            </div>
+            <GlassIcon
+              icon={mode === "receipt_review" || mode === "camera" ? Receipt : Sparkles}
+              variant="teal"
+              size="sm"
+            />
             <div>
-              <h2 className="font-serif text-lg font-bold text-ledger-ink">Record Transaction</h2>
-              <p className="text-xs text-ledger-inkMuted">Natural Language Parsing with Review-Before-Save</p>
+              <h2 className="font-serif text-lg font-bold text-ledger-ink">
+                {mode === "receipt_review" ? "Review Receipt Extraction" : mode === "camera" ? "Scan Receipt" : "Add Transaction"}
+              </h2>
+              <p className="text-xs text-ledger-inkMuted">
+                {mode === "receipt_review"
+                  ? "Verify extracted details before saving to ledger"
+                  : mode === "camera"
+                  ? "Capture live receipt using webcam or mobile rear camera"
+                  : "Quick AI parsing, camera scan, or manual form"}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex bg-ledger-bg p-0.5 rounded-lg border border-ledger-border text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setMode("nl")}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  mode === "nl" ? "bg-ledger-surface text-ledger-teal font-semibold shadow-hairline" : "text-ledger-inkMuted hover:text-ledger-ink"
-                }`}
-              >
-                Natural Language
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("manual")}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  mode === "manual" ? "bg-ledger-surface text-ledger-teal font-semibold shadow-hairline" : "text-ledger-inkMuted hover:text-ledger-ink"
-                }`}
-              >
-                Manual Form
-              </button>
-            </div>
+            {mode !== "camera" && mode !== "receipt_review" && (
+              <div className="flex bg-ledger-bg p-0.5 rounded-lg border border-ledger-border text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setMode("nl")}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    mode === "nl"
+                      ? "bg-ledger-surface text-ledger-teal font-semibold shadow-hairline"
+                      : "text-ledger-inkMuted hover:text-ledger-ink"
+                  }`}
+                >
+                  Natural Language
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("manual")}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    mode === "manual"
+                      ? "bg-ledger-surface text-ledger-teal font-semibold shadow-hairline"
+                      : "text-ledger-inkMuted hover:text-ledger-ink"
+                  }`}
+                >
+                  Manual Form
+                </button>
+              </div>
+            )}
 
             <button
               onClick={handleClose}
               className="text-ledger-inkSubtle hover:text-ledger-ink p-1 rounded-lg focus-ring"
+              title="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
@@ -223,9 +465,289 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {mode === "nl" ? (
+          {/* Extracting Loading Overlay */}
+          {isExtracting && (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin text-ledger-teal" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-ledger-ink">Analyzing receipt & document...</p>
+                <p className="text-xs text-ledger-inkMuted">Extracting vendor, date, line items & amounts with ₹0 local intelligence</p>
+              </div>
+            </div>
+          )}
+
+          {/* Mode 1: Camera Scanner View */}
+          {!isExtracting && mode === "camera" && (
+            <div className="space-y-4">
+              {!capturedPhotoUrl ? (
+                <div className="space-y-3">
+                  <div className="relative rounded-2xl overflow-hidden bg-slate-950 aspect-[4/3] max-h-80 flex items-center justify-center border border-ledger-border">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Viewfinder Target Guidelines */}
+                    <div className="absolute inset-4 sm:inset-8 border-2 border-dashed border-ledger-teal/70 rounded-xl pointer-events-none flex items-center justify-center">
+                      <span className="text-[11px] font-medium text-white/80 bg-black/50 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                        Position receipt within frame
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopCameraStream();
+                        setMode("nl");
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-medium text-ledger-inkMuted hover:text-ledger-ink border border-ledger-border"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={captureFrame}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ledger-teal text-white text-sm font-semibold hover:bg-ledger-tealHover shadow-sm"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Take Photo</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Captured Photo Confirmation */
+                <div className="space-y-4">
+                  <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-[4/3] max-h-80 border border-ledger-border">
+                    <img
+                      src={capturedPhotoUrl}
+                      alt="Captured receipt"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-ledger-inkMuted hover:text-ledger-ink border border-ledger-border"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Retake</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (capturedFile) {
+                          handleProcessReceipt(capturedFile);
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ledger-teal text-white text-sm font-semibold hover:bg-ledger-tealHover shadow-sm"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Use Photo & Extract</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mode 2: Receipt Review Step (Before Committing to Ledger) */}
+          {!isExtracting && mode === "receipt_review" && receiptDraft && (
+            <form onSubmit={handleReceiptReviewSubmit} className="space-y-4">
+              {/* Receipt File Metadata Card */}
+              <div className="p-3.5 rounded-2xl bg-ledger-surface border border-ledger-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-ledger-teal/10 text-ledger-teal flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-ledger-ink truncate max-w-[240px] sm:max-w-sm">
+                      {receiptDraft.file_name}
+                    </p>
+                    <p className="text-[11px] text-ledger-inkMuted">
+                      {(receiptDraft.file_size / 1024).toFixed(1)} KB • Attached
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>{Math.round(receiptDraft.confidence_score * 100)}% Match</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReceiptDraft(null);
+                      setMode("nl");
+                    }}
+                    className="text-xs text-ledger-inkMuted hover:text-ledger-red transition-colors"
+                    title="Remove attachment"
+                  >
+                    Replace
+                  </button>
+                </div>
+              </div>
+
+              {receiptDraft.warnings.length > 0 && (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{receiptDraft.warnings[0]}</span>
+                </div>
+              )}
+
+              {/* Editable Fields Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider mb-1">
+                    Merchant / Vendor
+                  </label>
+                  <input
+                    type="text"
+                    value={receiptDraft.merchant}
+                    onChange={(e) =>
+                      setReceiptDraft({
+                        ...receiptDraft,
+                        merchant: e.target.value,
+                        description: e.target.value || receiptDraft.description,
+                      })
+                    }
+                    placeholder="e.g. Starbucks, D-Mart, Amazon"
+                    className="w-full px-3 py-2 rounded-xl border border-ledger-border bg-ledger-bg text-ledger-ink text-sm focus-ring"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider mb-1">
+                    Total Amount (₹) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-ledger-inkSubtle text-sm">₹</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={receiptDraft.amount_rupees}
+                      onChange={(e) =>
+                        setReceiptDraft({ ...receiptDraft, amount_rupees: e.target.value })
+                      }
+                      placeholder="0.00"
+                      className="w-full pl-7 pr-3 py-2 rounded-xl border border-ledger-border bg-ledger-bg text-ledger-ink font-semibold tabular-nums text-sm focus-ring"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider mb-1">
+                    Category *
+                  </label>
+                  <select
+                    value={receiptDraft.category_id}
+                    onChange={(e) =>
+                      setReceiptDraft({ ...receiptDraft, category_id: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-ledger-border bg-ledger-bg text-ledger-ink text-sm focus-ring"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.kind})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider mb-1">
+                    Transaction Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={receiptDraft.date}
+                    onChange={(e) =>
+                      setReceiptDraft({ ...receiptDraft, date: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-ledger-border bg-ledger-bg text-ledger-ink text-sm focus-ring"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider mb-1">
+                  Description *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={receiptDraft.description}
+                  onChange={(e) =>
+                    setReceiptDraft({ ...receiptDraft, description: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-xl border border-ledger-border bg-ledger-bg text-ledger-ink text-sm focus-ring"
+                />
+              </div>
+
+              {/* Detected Line Items (Optional Collapsible) */}
+              {receiptDraft.line_items.length > 0 && (
+                <div className="border border-ledger-border rounded-xl p-3 bg-ledger-surfaceSubtle space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLineItems(!showLineItems)}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-ledger-inkMuted hover:text-ledger-ink"
+                  >
+                    <span>Detected Line Items ({receiptDraft.line_items.length})</span>
+                    {showLineItems ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  {showLineItems && (
+                    <div className="space-y-1.5 pt-1 border-t border-ledger-border/60">
+                      {receiptDraft.line_items.map((item, i) => (
+                        <div key={i} className="flex justify-between text-xs text-ledger-ink py-0.5">
+                          <span className="truncate pr-2">{item.name}</span>
+                          <span className="font-semibold tabular-nums text-ledger-inkMuted">
+                            {formatINR(item.amount_paise)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-3 border-t border-ledger-border">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReceiptDraft(null);
+                    setMode("nl");
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-medium text-ledger-inkMuted hover:text-ledger-ink border border-ledger-border"
+                >
+                  Discard
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveTransactionMutation.isPending}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-ledger-teal text-white text-xs font-semibold hover:bg-ledger-tealHover disabled:opacity-50 transition-colors shadow-sm focus-ring"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>
+                    {saveTransactionMutation.isPending ? "Recording..." : "Save Transaction to Ledger"}
+                  </span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Mode 3: Natural Language Mode */}
+          {!isExtracting && mode === "nl" && (
             <>
-              {/* Natural Language Prompt Input */}
               {!isReviewed ? (
                 <form onSubmit={handleParseSubmit} className="space-y-4">
                   <div>
@@ -240,6 +762,35 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
                       className="w-full px-4 py-3 rounded-xl border border-ledger-border bg-ledger-bg text-ledger-ink placeholder:text-ledger-inkSubtle focus-ring resize-none text-sm leading-relaxed"
                       autoFocus
                     />
+                  </div>
+
+                  {/* Attachment & Camera Action Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-ledger-surface border border-ledger-border">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ledger-border bg-ledger-bg hover:border-ledger-teal/50 text-xs font-medium text-ledger-ink transition-colors"
+                        title="Upload receipt image, PDF, or document (max 5MB)"
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-ledger-teal" />
+                        <span>Upload Receipt</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ledger-border bg-ledger-bg hover:border-ledger-teal/50 text-xs font-medium text-ledger-ink transition-colors"
+                        title="Scan with device webcam or phone rear camera"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-ledger-teal" />
+                        <span>Scan Camera</span>
+                      </button>
+                    </div>
+
+                    <span className="text-[11px] text-ledger-inkSubtle">
+                      PDF, PNG, JPG, WebP (≤5MB)
+                    </span>
                   </div>
 
                   {/* Quick Examples */}
@@ -408,9 +959,38 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
                 </div>
               )}
             </>
-          ) : (
-            /* Manual Form */
+          )}
+
+          {/* Mode 4: Manual Form */}
+          {!isExtracting && mode === "manual" && (
             <form onSubmit={handleManualSubmit} className="space-y-4">
+              {/* Attachment Bar in Manual Form */}
+              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-ledger-surface border border-ledger-border">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ledger-border bg-ledger-bg hover:border-ledger-teal/50 text-xs font-medium text-ledger-ink transition-colors"
+                  >
+                    <Paperclip className="w-3.5 h-3.5 text-ledger-teal" />
+                    <span>Upload Receipt</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ledger-border bg-ledger-bg hover:border-ledger-teal/50 text-xs font-medium text-ledger-ink transition-colors"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-ledger-teal" />
+                    <span>Scan Camera</span>
+                  </button>
+                </div>
+
+                <span className="text-[11px] text-ledger-inkSubtle">
+                  PDF, PNG, JPG, WebP (≤5MB)
+                </span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-ledger-inkMuted uppercase tracking-wider mb-1">
@@ -501,11 +1081,11 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
                 </button>
                 <button
                   type="submit"
-                  disabled={manualSaveMutation.isPending}
+                  disabled={saveTransactionMutation.isPending}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-ledger-teal text-white text-xs font-semibold hover:bg-ledger-tealHover disabled:opacity-50 transition-colors shadow-sm focus-ring"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>{manualSaveMutation.isPending ? "Recording..." : "Record Transaction"}</span>
+                  <span>{saveTransactionMutation.isPending ? "Recording..." : "Record Transaction"}</span>
                 </button>
               </div>
             </form>

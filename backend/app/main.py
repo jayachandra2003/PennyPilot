@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.engine.url import make_url
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.api import api_router
@@ -42,10 +43,11 @@ async def lifespan(app: FastAPI):
             logger.error(error_msg)
             raise FileNotFoundError(error_msg)
 
-    # In development/local SQLite, verify database connectivity
+    # Verify database connectivity
     try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables verified successfully.")
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Database connection verified successfully.")
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
         raise

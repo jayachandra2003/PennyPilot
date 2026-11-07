@@ -13,9 +13,23 @@ class CategoryBreakdownItem(BaseModel):
     transaction_count: int
 
 
-class MonthlySummaryResponse(BaseModel):
-    year: int
+class YearlyMonthTrajectoryItem(BaseModel):
     month: int
+    month_name: str
+    income_paise: int
+    income_formatted: str
+    expense_paise: int
+    expense_formatted: str
+    net_balance_paise: int
+    net_balance_formatted: str
+    savings_rate_percent: float
+    transaction_count: int
+
+
+class MonthlySummaryResponse(BaseModel):
+    period: str = "monthly"
+    year: int
+    month: Optional[int] = None
     first_day: str
     last_day: str
     total_days: int
@@ -28,6 +42,7 @@ class MonthlySummaryResponse(BaseModel):
     net_balance_formatted: str
     savings_rate_percent: float
     category_breakdown: List[CategoryBreakdownItem]
+    monthly_trajectory: Optional[List[YearlyMonthTrajectoryItem]] = None
 
 
 class BudgetPaceResponse(BaseModel):
@@ -76,3 +91,55 @@ class AnomalyReportResponse(BaseModel):
     mad_paise: Optional[int] = None
     anomalies_count: int = 0
     anomalies: List[AnomalyItem] = []
+
+
+class HistoricalMonthSummary(BaseModel):
+    year: int
+    month: int
+    month_name: str
+    month_short: str
+    first_day: str
+    last_day: str
+    total_days: int
+    transaction_count: int
+    is_empty: bool
+    income_paise: int
+    income_formatted: str
+    expense_paise: int
+    expense_formatted: str
+    net_balance_paise: int
+    net_balance_formatted: str
+    savings_rate_percent: float
+    category_breakdown: List[CategoryBreakdownItem]
+    expense_mom_delta_paise: Optional[int] = None
+    expense_mom_delta_formatted: Optional[str] = None
+    expense_mom_pct: Optional[float] = None
+    income_mom_delta_paise: Optional[int] = None
+    income_mom_delta_formatted: Optional[str] = None
+    income_mom_pct: Optional[float] = None
+    savings_rate_mom_delta: Optional[float] = None
+
+
+class HistoricalAnalyticsOverall(BaseModel):
+    total_income_paise: int
+    total_income_formatted: str
+    total_expense_paise: int
+    total_expense_formatted: str
+    total_net_savings_paise: int
+    total_net_savings_formatted: str
+    average_monthly_income_paise: int
+    average_monthly_income_formatted: str
+    average_monthly_expense_paise: int
+    average_monthly_expense_formatted: str
+    average_monthly_savings_paise: int
+    average_monthly_savings_formatted: str
+    overall_savings_rate_percent: float
+    months_count: int
+    active_months_count: int
+    top_categories: List[CategoryBreakdownItem]
+
+
+class HistoricalAnalyticsResponse(BaseModel):
+    months: List[HistoricalMonthSummary]
+    overall: HistoricalAnalyticsOverall
+

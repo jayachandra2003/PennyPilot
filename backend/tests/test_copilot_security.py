@@ -9,10 +9,15 @@ Tests:
 """
 import time
 from datetime import date, timedelta
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from app.core.rate_limiter import TokenBucketRateLimiter, copilot_rate_limiter
 from app.core.security import create_access_token
-from app.db.session import SessionLocal
+from app.db.base import Base
+from app.db.session import SessionLocal, get_db
 from app.main import app
 from app.models.category import Category
 from app.models.transaction import Transaction
@@ -21,8 +26,33 @@ from app.models.user import User
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def isolated_db():
+    """Ensure complete test isolation using an in-memory SQLite database."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestingSession
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+
+
 def _create_isolated_user(email: str, name: str) -> tuple[str, str]:
-    db = SessionLocal()
+    override = app.dependency_overrides.get(get_db)
+    db = next(override()) if override else SessionLocal()
     u = db.query(User).filter(User.email == email).first()
     if not u:
         u = User(email=email, password_hash="fakehash", display_name=name)

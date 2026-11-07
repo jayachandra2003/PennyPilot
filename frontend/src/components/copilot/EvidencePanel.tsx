@@ -10,19 +10,10 @@ interface EvidencePanelProps {
 
 export const EvidencePanel: React.FC<EvidencePanelProps> = ({
   evidence,
-  provider,
-  tier,
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const { totals, period, categories, anomalies, top_expenses, mom_delta } = evidence;
-
-  const providerLabel =
-    provider === "ollama"
-      ? "Ollama (Qwen 2.5:3B)"
-      : provider === "gemini"
-      ? "Gemini Free Tier"
-      : "Deterministic Engine";
 
   return (
     <div className="mt-3 border border-ledger-border rounded-xl bg-ledger-bg/60 overflow-hidden text-xs">
@@ -33,13 +24,10 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
       >
         <div className="flex items-center gap-2">
           <Database className="w-3.5 h-3.5 text-ledger-teal" />
-          <span className="font-semibold text-ledger-ink">Verified Fact Bundle</span>
-          <span className="text-[10px] bg-ledger-tealLight text-ledger-teal font-mono px-2 py-0.5 rounded-full border border-ledger-teal/20">
-            {providerLabel} • Tier {tier}
-          </span>
+          <span className="font-semibold text-ledger-ink">Verified Calculation Data</span>
         </div>
         <div className="flex items-center gap-1.5 text-ledger-inkMuted hover:text-ledger-ink">
-          <span className="text-[11px]">{isOpen ? "Hide Evidence" : "Inspect Verified Data"}</span>
+          <span className="text-[11px]">{isOpen ? "Hide Details" : "Inspect Calculation Data"}</span>
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </div>
       </button>

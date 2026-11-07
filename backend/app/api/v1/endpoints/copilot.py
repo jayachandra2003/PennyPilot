@@ -56,6 +56,7 @@ async def ask_copilot(
 
     # 3. Classify question intent
     intent, target_cat = IntentClassifier.classify(query_in.query, cat_dicts)
+    nav_action = IntentClassifier.get_navigation_action(intent, query_in.query)
 
     # 4. Gather verified FactBundle
     fact_bundle = FactBundleBuilder.build(
@@ -88,6 +89,7 @@ async def ask_copilot(
         tier=res["tier"],
         evidence=fact_bundle,
         disclaimer=disclaimer,
+        navigation_action=nav_action,
     )
 
 

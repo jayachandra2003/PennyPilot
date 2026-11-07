@@ -8,6 +8,9 @@ import {
   Receipt,
   Sparkles,
   Download,
+  FileText,
+  FileType,
+  ChevronDown,
   X,
   Check,
   ArrowUpRight,
@@ -18,7 +21,14 @@ import {
 import type { CategoryItem, TransactionItem } from "../../lib/api";
 import { deleteTransaction, updateTransaction } from "../../lib/api";
 import { formatINR, paiseToRupees, rupeesToPaise } from "../../lib/currency";
+import {
+  exportTransactionsCSV,
+  exportTransactionsPDF,
+  exportTransactionsDOCX,
+} from "../../lib/exportReports";
 import { useToast } from "../common/Toast";
+import { TransactionListSkeleton } from "../common/Skeleton";
+import { GlassIcon, CategoryGlassIcon } from "../common/GlassIcon";
 
 export const TRANSACTION_SUBTITLE = "Your income and expenses, organized with precise INR tracking.";
 
@@ -41,6 +51,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const [selectedCat, setSelectedCat] = useState("all");
   const [selectedKind, setSelectedKind] = useState<"all" | "expense" | "income">("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   // Edit modal state
   const [editingTx, setEditingTx] = useState<TransactionItem | null>(null);
@@ -191,39 +202,34 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       toast("No transactions to export", "info");
       return;
     }
-    const headers = ["Date", "Description", "Merchant", "Category", "Type", "Amount (INR)", "Source"];
-    const rows = filtered.map((t) => [
-      t.occurred_on,
-      `"${t.description.replace(/"/g, '""')}"`,
-      `"${(t.merchant || "").replace(/"/g, '""')}"`,
-      `"${(t.category_name || "General").replace(/"/g, '""')}"`,
-      t.kind,
-      paiseToRupees(t.amount_paise),
-      t.source,
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    const dateStamp = new Date().toISOString().split("T")[0];
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `pennypilot_ledger_${dateStamp}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportTransactionsCSV(filtered);
     toast("Ledger exported as CSV", "success");
+  };
+
+  const handleExportPDF = () => {
+    if (filtered.length === 0) {
+      toast("No transactions to export", "info");
+      return;
+    }
+    exportTransactionsPDF(filtered);
+    toast("PDF report downloaded", "success");
+  };
+
+  const handleExportDOCX = () => {
+    if (filtered.length === 0) {
+      toast("No transactions to export", "info");
+      return;
+    }
+    exportTransactionsDOCX(filtered);
+    toast("Word document (.docx) report downloaded", "success");
   };
 
   return (
     <div className="space-y-5 md:space-y-6 min-w-0">
       {/* 1. Header & Actions Bar */}
-      <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-3 sm:p-5 md:p-6 space-y-3 sm:space-y-4 min-w-0 overflow-hidden">
+      <div className="glass-panel p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden rounded-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
-                Audit Trail
-              </span>
-            </div>
             <h2 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-ledger-ink tracking-tight">
               Financial Ledger
             </h2>
@@ -233,21 +239,83 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleExportCSV}
-              className="btn-secondary text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 min-h-[36px] focus-ring"
-              title="Export current view to CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
+            {/* Export Report Dropdown (CSV, PDF, DOCX) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                className="btn-secondary text-xs sm:text-sm px-3 sm:px-3.5 py-1.5 min-h-[38px] focus-ring flex items-center gap-1.5 select-none cursor-pointer"
+                title="Download ledger report as CSV, PDF, or DOCX"
+                aria-expanded={isExportMenuOpen}
+              >
+                <Download className="w-3.5 h-3.5 text-ledger-teal" />
+                <span>Export Report</span>
+                <ChevronDown className="w-3 h-3 text-ledger-inkSubtle" />
+              </button>
+
+              {isExportMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsExportMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-1.5 w-52 bg-white dark:bg-[#141F2E] border border-slate-200 dark:border-white/10 rounded-2xl shadow-float p-1.5 z-50 animate-fade-in text-xs space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportCSV();
+                        setIsExportMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-ledger-ink hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-left cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <div className="font-semibold text-ledger-ink">CSV Spreadsheet</div>
+                        <div className="text-[10px] text-ledger-inkSubtle">Raw table data (.csv)</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportPDF();
+                        setIsExportMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-ledger-ink hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-left cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-rose-500 shrink-0" />
+                      <div>
+                        <div className="font-semibold text-ledger-ink">PDF Statement</div>
+                        <div className="text-[10px] text-ledger-inkSubtle">Printable audit report (.pdf)</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportDOCX();
+                        setIsExportMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-ledger-ink hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-left cursor-pointer"
+                    >
+                      <FileType className="w-4 h-4 text-sky-500 shrink-0" />
+                      <div>
+                        <div className="font-semibold text-ledger-ink">DOCX Document</div>
+                        <div className="text-[10px] text-ledger-inkSubtle">Word report (.docx)</div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               onClick={onOpenQuickAdd}
-              className="btn-primary text-xs sm:text-sm px-3 sm:px-3.5 py-1.5 min-h-[36px] focus-ring"
+              className="btn-primary text-xs sm:text-sm px-3 sm:px-3.5 py-1.5 min-h-[38px] focus-ring"
               title="Record transaction with natural language"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Quick Add</span>
+              <span>Record Transaction</span>
             </button>
           </div>
         </div>
@@ -260,9 +328,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 <span className="hidden sm:inline">Transaction </span>Volume
               </span>
-              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <Receipt className="w-3 h-3 sm:w-4 sm:h-4" />
-              </div>
+              <GlassIcon icon={Receipt} variant="indigo" size="xs" className="sm:hidden" />
+              <GlassIcon icon={Receipt} variant="indigo" size="sm" className="hidden sm:inline-flex" />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div className="font-serif text-sm sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate">
@@ -291,9 +358,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 <span className="hidden sm:inline">Total </span>Inflow
               </span>
-              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-md bg-ledger-sageLight text-ledger-sage flex items-center justify-center border border-ledger-sage/20 shrink-0">
-                <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              </div>
+              <GlassIcon icon={ArrowUpRight} variant="emerald" size="xs" className="sm:hidden" />
+              <GlassIcon icon={ArrowUpRight} variant="emerald" size="sm" className="hidden sm:inline-flex" />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div className="font-serif text-sm sm:text-2xl lg:text-3xl font-bold text-ledger-sage tracking-tight tabular-nums truncate">
@@ -319,9 +385,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 <span className="hidden sm:inline">Total </span>Outflow
               </span>
-              <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              </div>
+              <GlassIcon icon={ArrowDownRight} variant="rose" size="xs" className="sm:hidden" />
+              <GlassIcon icon={ArrowDownRight} variant="rose" size="sm" className="hidden sm:inline-flex" />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div className="font-serif text-sm sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate">
@@ -377,7 +442,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     onClick={() => handleKindChange(kind)}
                     className={`px-2 sm:px-3 py-1 rounded text-xs font-medium transition-all ${
                       isActive
-                        ? "bg-ledger-ink text-white shadow-hairline"
+                        ? "bg-slate-900 text-white dark:bg-ledger-surfaceElevated dark:text-ledger-teal dark:border dark:border-ledger-border shadow-hairline font-semibold"
                         : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surface"
                     } focus-ring`}
                   >
@@ -418,12 +483,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       </div>
 
       {/* 4. Ledger Content: Desktop Table & Mobile List */}
-      <div className="card-base p-0 overflow-hidden min-w-0">
-        {isLoading ? (
-          <div className="p-8 text-center text-xs text-ledger-inkMuted animate-pulse">
-            Loading ledger transactions...
-          </div>
-        ) : filtered.length === 0 ? (
+      {isLoading ? (
+        <TransactionListSkeleton />
+      ) : (
+        <div className="glass-panel p-0 overflow-hidden min-w-0 rounded-2xl">
+          {filtered.length === 0 ? (
           <div className="p-10 sm:p-14 text-center space-y-3">
             <div className="w-12 h-12 rounded-lg bg-ledger-surfaceSubtle text-ledger-inkMuted border border-ledger-border flex items-center justify-center mx-auto">
               <Receipt className="w-6 h-6" />
@@ -519,8 +583,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
                         {/* Category */}
                         <td className="py-3 px-4">
-                          <span className="badge-tag">
-                            {t.category_name || "General"}
+                          <span className="inline-flex items-center gap-1.5">
+                            <CategoryGlassIcon iconName={t.category_name} size="xs" />
+                            <span className="badge-tag">
+                              {t.category_name || "General"}
+                            </span>
                           </span>
                         </td>
 
@@ -539,7 +606,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
                         {/* Amount */}
                         <td className="py-3 px-4 text-right font-mono font-semibold text-sm tabular-nums whitespace-nowrap">
-                          <span className={isExpense ? "text-ledger-ink" : "text-ledger-sage"}>
+                          <span className={isExpense ? "text-ledger-ink dark:text-ledger-red" : "text-ledger-sage"}>
                             {isExpense ? `-${formatINR(t.amount_paise)}` : `+${formatINR(t.amount_paise)}`}
                           </span>
                         </td>
@@ -584,18 +651,15 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     {/* Top Row: Icon + Title + Amount */}
                     <div className="flex items-start justify-between gap-2.5 min-w-0">
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <div
-                          className={`w-7 h-7 rounded flex items-center justify-center shrink-0 text-xs font-semibold mt-0.5 ${
-                            isExpense
-                              ? "bg-ledger-surfaceSubtle text-ledger-inkMuted border border-ledger-borderSubtle"
-                              : "bg-ledger-sageLight text-ledger-sage border border-ledger-sage/20"
-                          }`}
-                        >
-                          {isExpense ? (
-                            <ArrowDownRight className="w-3.5 h-3.5" />
-                          ) : (
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          )}
+                        <div className="relative shrink-0 mt-0.5">
+                          <CategoryGlassIcon iconName={t.category_name} size="sm" />
+                          <span
+                            className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] shadow-sm border border-ledger-surface ${
+                              isExpense ? "bg-rose-500 text-white" : "bg-emerald-600 text-white"
+                            }`}
+                          >
+                            {isExpense ? <ArrowDownRight className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
+                          </span>
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
@@ -621,7 +685,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       </div>
 
                       <div className="text-right font-mono font-semibold text-sm tabular-nums whitespace-nowrap shrink-0">
-                        <span className={isExpense ? "text-ledger-ink" : "text-ledger-sage"}>
+                        <span className={isExpense ? "text-ledger-ink dark:text-ledger-red" : "text-ledger-sage"}>
                           {isExpense ? `-${formatINR(t.amount_paise)}` : `+${formatINR(t.amount_paise)}`}
                         </span>
                       </div>
@@ -698,10 +762,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           </>
         )}
       </div>
+      )}
 
       {/* 6. Edit Transaction Modal */}
       {editingTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ledger-ink/40 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in">
           <div className="card-base p-5 sm:p-6 shadow-modal max-w-md w-full rounded-lg space-y-4">
             <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3">
               <div>

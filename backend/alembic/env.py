@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import sqlalchemy as sa
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 import os
@@ -18,8 +19,9 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override URL with environment settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Override URL with environment settings (prefer explicit DATABASE_URL env var if set)
+db_url = os.environ.get("DATABASE_URL") or settings.DATABASE_URL
+config.set_main_option("sqlalchemy.url", db_url)
 
 
 def run_migrations_offline() -> None:
@@ -44,14 +46,40 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            render_as_batch=True,  # SQLite compatibility
-        )
+        is_sqlite = connection.dialect.name == "sqlite"
 
-        with context.begin_transaction():
-            context.run_migrations()
+        if is_sqlite:
+            # 1. Disable foreign keys via raw DBAPI connection BEFORE starting the migration transaction
+            raw_cursor = connection.connection.dbapi_connection.cursor()
+            raw_cursor.execute("PRAGMA foreign_keys = OFF")
+            raw_cursor.close()
+
+        try:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                render_as_batch=True,  # SQLite compatibility
+            )
+
+            with context.begin_transaction():
+                context.run_migrations()
+
+            # 2. Re-enable foreign keys and verify integrity post-migration on SQLite
+            if is_sqlite:
+                raw_cursor = connection.connection.dbapi_connection.cursor()
+                raw_cursor.execute("PRAGMA foreign_keys = ON")
+                fk_errors = raw_cursor.execute("PRAGMA foreign_key_check").fetchall()
+                raw_cursor.close()
+                if fk_errors:
+                    raise RuntimeError(
+                        f"SQLite foreign key constraint violation detected after migration: {fk_errors}"
+                    )
+        finally:
+            if is_sqlite:
+                # 3. Guaranteed restoration of foreign keys on connection cleanup (success or failure)
+                raw_cursor = connection.connection.dbapi_connection.cursor()
+                raw_cursor.execute("PRAGMA foreign_keys = ON")
+                raw_cursor.close()
 
 
 if context.is_offline_mode():

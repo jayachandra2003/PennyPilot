@@ -31,3 +31,7 @@ class CategoryResponse(CategoryBase):
     user_id: str
     is_archived: bool
     created_at: datetime
+    transaction_count: int = 0
+    has_active_budget: bool = False
+    is_default: bool = False
+

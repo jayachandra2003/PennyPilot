@@ -60,14 +60,14 @@ class OllamaClient(BaseLLMClient):
             payload["system"] = system_prompt
 
         try:
-            async with httpx.AsyncClient(timeout=12.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 res = await client.post(f"{self.base_url}/api/generate", json=payload)
                 if res.status_code == 200:
                     data = res.json()
                     return data.get("response", "").strip()
                 logger.warning(f"Ollama returned status {res.status_code}: {res.text}")
         except Exception as e:
-            logger.warning(f"Local Ollama connection failed: {e}")
+            logger.warning(f"Local Ollama connection failed: {repr(e)}")
         return None
 
 
@@ -172,7 +172,17 @@ class AIOrchestrator:
             intent=intent,
             target_cat=target_cat,
             facts=facts,
+            question=question,
         )
+
+        # For conversational and app navigation questions, return verified deterministic answer directly
+        # to guarantee zero hallucination of fake routes, non-existent buttons, or speculative features.
+        if intent in ("greeting", "small_talk", "app_about") or intent.startswith("nav_"):
+            return {
+                "answer": deterministic_answer,
+                "provider": "deterministic",
+                "tier": 3,
+            }
 
         # 2. Build strict grounding prompt for LLMs
         system_prompt = (
@@ -185,20 +195,39 @@ class AIOrchestrator:
             "3. Format currency with Indian Rupee symbol (e.g., ₹12,500.00) in bold.\n"
             "4. Keep your answer concise (2-4 sentences), professional, empathetic, and actionable.\n"
             "5. Do NOT provide speculative investment advice.\n"
-            "6. When explaining why expenses increased, ONLY attribute the increase to categories that actually grew (under 'increase_drivers'). "
+            "6. When explaining why expenses increased, ONLY attribute the increase to categories that actually grew (under 'categories_driving_increase'). "
             "NEVER claim that a fixed recurring expense (like rent) caused the increase if its amount was unchanged.\n"
-            "7. Clearly distinguish percentage of total expenses from percentage of total income; do NOT confuse them."
+            "7. Clearly distinguish percentage of total expenses from percentage of total income; do NOT confuse them.\n"
+            "8. Answer the user's EXACT question directly. If they ask about reducing spending, identify their highest outflow categories and suggest specific cutbacks. "
+            "If they ask if they are good at saving, evaluate their savings rate, net retained capital, and emergency buffer. "
+            "Do NOT output a generic monthly summary when a specific question was asked."
         )
 
         # Compact facts payload for token efficiency
         context_payload = {
             "period": f"{facts['period']['year']}-{facts['period']['month']:02d}",
             "totals": facts["totals"],
-            "top_category": facts["top_category"],
+            "savings_performance": {
+                "income": facts["totals"]["income_formatted"],
+                "expenses": facts["totals"]["expense_formatted"],
+                "net_savings": facts["totals"]["net_balance_formatted"],
+                "savings_rate": f"{facts['totals']['savings_rate_percent']}%",
+                "savings_discipline": "exceptional" if facts["totals"]["savings_rate_percent"] >= 50 else ("disciplined (meets 20% baseline)" if facts["totals"]["savings_rate_percent"] >= 20 else "needs improvement (< 20%)"),
+            },
+            "top_categories_by_outflow": [
+                {
+                    "category": c["category_name"],
+                    "total": c["formatted_total"],
+                    "percentage_of_expenses": f"{c['percentage']}%",
+                    "transaction_count": c["transaction_count"],
+                }
+                for c in facts.get("categories", [])[:4]
+            ],
             "budget_pace": {
                 "status": facts["budget_pace"]["status"],
                 "spent": facts["budget_pace"]["spent_formatted"],
                 "limit": facts["budget_pace"]["limit_formatted"],
+                "remaining_buffer": facts.get("financial_plan", {}).get("remaining_buffer_formatted") or facts["budget_pace"].get("remaining_buffer_formatted", "₹0.00"),
                 "projected_overrun": facts["budget_pace"]["projected_overrun_formatted"],
             },
             "top_anomalies": [
@@ -227,7 +256,7 @@ class AIOrchestrator:
         )
 
         # 3. Attempt Tier 1 (Hosted Free)
-        if self.tier1_hosted:
+        if self.tier1_hosted and await self.tier1_hosted.is_available():
             try:
                 ai_text = await self.tier1_hosted.generate(user_prompt, system_prompt)
                 if ai_text:
@@ -238,14 +267,15 @@ class AIOrchestrator:
                 logger.warning(f"Tier 1 error: {e}")
 
         # 4. Attempt Tier 2 (Local Ollama Qwen 2.5:3B)
-        try:
-            ai_text = await self.tier2_local.generate(user_prompt, system_prompt)
-            if ai_text:
-                sanitized, is_valid = FactBundleVerifier.verify(ai_text, facts)
-                if is_valid:
-                    return {"answer": sanitized, "provider": "ollama", "tier": 2}
-        except Exception as e:
-            logger.warning(f"Tier 2 error: {e}")
+        if await self.tier2_local.is_available():
+            try:
+                ai_text = await self.tier2_local.generate(user_prompt, system_prompt)
+                if ai_text:
+                    sanitized, is_valid = FactBundleVerifier.verify(ai_text, facts)
+                    if is_valid:
+                        return {"answer": sanitized, "provider": "ollama", "tier": 2}
+            except Exception as e:
+                logger.warning(f"Tier 2 error: {e}")
 
         # 5. Fallback to Tier 3 (Deterministic Engine)
         return {

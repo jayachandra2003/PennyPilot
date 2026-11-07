@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.errors import BadRequestException, NotFoundException
 from app.db.session import get_db
-from app.domain.aggregates import calculate_monthly_aggregation
+from app.domain.aggregates import (
+    calculate_historical_analytics,
+    calculate_monthly_aggregation,
+    calculate_yearly_aggregation,
+)
 from app.domain.anomaly import detect_anomalies_mad
 from app.domain.budget_engine import calculate_budget_pace
 from app.domain.nl_parser import parse_expense_phrase
@@ -15,7 +19,12 @@ from app.models.budget import Budget
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.domain import AnomalyReportResponse, BudgetPaceResponse, MonthlySummaryResponse
+from app.schemas.domain import (
+    AnomalyReportResponse,
+    BudgetPaceResponse,
+    HistoricalAnalyticsResponse,
+    MonthlySummaryResponse,
+)
 from app.schemas.transaction import (
     BulkTransactionCreate,
     NLParseRequest,
@@ -207,11 +216,12 @@ def list_transactions(
 @router.get("/summary", response_model=MonthlySummaryResponse)
 def get_monthly_summary(
     year: int = Query(default=2026),
-    month: int = Query(default=11, ge=1, le=12),
+    month: Optional[int] = Query(default=11, ge=1, le=12),
+    period: str = Query(default="monthly", pattern="^(monthly|yearly)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get verified, deterministic monthly totals and category breakdowns."""
+    """Get verified, deterministic monthly or yearly totals and category breakdowns."""
     txs = (
         db.query(Transaction)
         .join(Category, Transaction.category_id == Category.id)
@@ -233,8 +243,60 @@ def get_monthly_summary(
             "deleted_at": t.deleted_at,
         })
 
-    summary = calculate_monthly_aggregation(tx_dicts, year, month)
+    if period == "yearly":
+        summary = calculate_yearly_aggregation(tx_dicts, year)
+    else:
+        m = month or 11
+        summary = calculate_monthly_aggregation(tx_dicts, year, m)
     return MonthlySummaryResponse(**summary)
+
+
+@router.get("/analytics/history", response_model=HistoricalAnalyticsResponse)
+def get_historical_analytics(
+    months: int = Query(default=6, ge=1, le=12),
+    end_year: Optional[int] = Query(default=None),
+    end_month: Optional[int] = Query(default=None, ge=1, le=12),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get 6-month (or custom N-month) historical financial analytics.
+    Calculates verified monthly aggregates, MoM deltas, savings rates,
+    and category breakdowns with integer-paise precision and user isolation.
+    """
+    now = today_ist()
+    target_year = end_year or now.year
+    target_month = end_month or now.month
+
+    txs = (
+        db.query(Transaction)
+        .outerjoin(Category, Transaction.category_id == Category.id)
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.deleted_at.is_(None),
+        )
+        .all()
+    )
+
+    tx_dicts = []
+    for t in txs:
+        tx_dicts.append({
+            "kind": t.kind,
+            "amount_paise": t.amount_paise,
+            "occurred_on": t.occurred_on,
+            "category_id": t.category_id,
+            "category_name": t.category.name if t.category else "Uncategorized",
+            "deleted_at": t.deleted_at,
+        })
+
+    result = calculate_historical_analytics(
+        transactions=tx_dicts,
+        end_year=target_year,
+        end_month=target_month,
+        num_months=months,
+    )
+    return HistoricalAnalyticsResponse(**result)
+
 
 
 @router.get("/pace", response_model=BudgetPaceResponse)

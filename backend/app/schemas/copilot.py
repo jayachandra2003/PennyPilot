@@ -9,6 +9,12 @@ class CopilotQueryRequest(BaseModel):
     month: Optional[int] = Field(default=11, ge=1, le=12)
 
 
+class NavigationAction(BaseModel):
+    label: str
+    target: str
+    section: Optional[str] = None
+
+
 class CopilotQueryResponse(BaseModel):
     query: str
     answer: str
@@ -18,6 +24,7 @@ class CopilotQueryResponse(BaseModel):
     tier: int
     evidence: Dict[str, Any]
     disclaimer: str
+    navigation_action: Optional[NavigationAction] = None
 
 
 class MonthlyReportResponse(BaseModel):

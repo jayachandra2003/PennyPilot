@@ -4,20 +4,113 @@
 
 @layer base {
   :root {
-    --canvas-bg: #FAF8F5;
-    --surface-card: #FFFFFF;
-    --surface-subtle: #F5F2EA;
-    --surface-hover: #F7F5EE;
-    --border-hairline: #E8E4DC;
-    --border-subtle: #F0ECE4;
-    --border-dark: #D6D0C4;
-    --ink-primary: #12161A;
-    --ink-secondary: #4E5661;
-    --ink-tertiary: #767E8A;
-    --ink-faint: #9DA5B0;
-    --brand-teal: #0F766E;
-    --brand-teal-hover: #0D635C;
-    --brand-teal-light: #EBF5F3;
+    /* Quiet Ledger Light Theme — Crisp Solid Surfaces & Clean Warm Neutral Canvas */
+    --color-ledger-bg: #F7F5F0;
+    --color-ledger-surface: #FFFFFF;
+    --color-ledger-surfaceSubtle: #F8FAFC;
+    --color-ledger-surfaceHover: #F1F5F9;
+    --color-ledger-border: #E2E8F0;
+    --color-ledger-borderSubtle: #E2E8F0;
+    --color-ledger-borderDark: #CBD5E1;
+    --color-ledger-ink: #0F172A;
+    --color-ledger-inkMuted: #334155;
+    --color-ledger-inkSubtle: #475569;
+    --color-ledger-inkFaint: #64748B;
+    --color-ledger-teal: #0D9488;
+    --color-ledger-tealHover: #0F766E;
+    --color-ledger-tealLight: rgba(13, 148, 136, 0.10);
+    --color-ledger-amber: #B45309;
+    --color-ledger-amberLight: rgba(217, 119, 6, 0.10);
+    --color-ledger-red: #BE123C;
+    --color-ledger-redLight: rgba(225, 29, 72, 0.10);
+    --color-ledger-sage: #047857;
+    --color-ledger-sageLight: rgba(5, 150, 105, 0.10);
+    --color-ledger-gold: #B45309;
+    --color-ledger-overlay: rgba(15, 23, 42, 0.45);
+
+    /* Restrained depth shadows to clearly elevate solid white cards above the ambient background */
+    --glass-card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    --glass-subtle-shadow: 0 2px 8px -1px rgba(15, 23, 42, 0.04);
+    --glass-glow: 0 0 18px -2px rgba(13, 148, 136, 0.18);
+
+    --canvas-bg: var(--color-ledger-bg);
+    --surface-card: var(--color-ledger-surface);
+    --surface-subtle: var(--color-ledger-surfaceSubtle);
+    --surface-hover: var(--color-ledger-surfaceHover);
+    --border-hairline: var(--color-ledger-border);
+    --border-subtle: var(--color-ledger-borderSubtle);
+    --border-dark: var(--color-ledger-borderDark);
+    --ink-primary: var(--color-ledger-ink);
+    --ink-secondary: var(--color-ledger-inkMuted);
+    --ink-tertiary: var(--color-ledger-inkSubtle);
+    --ink-faint: var(--color-ledger-inkFaint);
+    --brand-teal: var(--color-ledger-teal);
+    --brand-teal-hover: var(--color-ledger-tealHover);
+    --brand-teal-light: var(--color-ledger-tealLight);
+
+    --chart-bar-start: #0F172A;
+    --chart-bar-end: #334155;
+    --chart-today-start: #0D9488;
+    --chart-today-end: #14B8A6;
+    --chart-future-bar: rgba(226, 232, 240, 0.8);
+    --chart-empty-bar: rgba(203, 213, 225, 0.6);
+  }
+
+  html.dark,
+  :root.dark,
+  [data-theme="dark"],
+  .dark {
+    /* Restaurant/Cafe Billing Glassmorphism — Deep Midnight Sapphire Slate Glass */
+    --color-ledger-bg: #0C131D;
+    --color-ledger-surface: rgba(20, 31, 46, 0.72);
+    --color-ledger-surfaceSubtle: rgba(28, 43, 62, 0.65);
+    --color-ledger-surfaceHover: rgba(36, 54, 78, 0.78);
+    --color-ledger-border: rgba(255, 255, 255, 0.12);
+    --color-ledger-borderSubtle: rgba(255, 255, 255, 0.07);
+    --color-ledger-borderDark: rgba(255, 255, 255, 0.22);
+    --color-ledger-ink: #F8FAFC;
+    --color-ledger-inkMuted: #94A3B8;
+    --color-ledger-inkSubtle: #64748B;
+    --color-ledger-inkFaint: #475569;
+    --color-ledger-teal: #2DD4BF;
+    --color-ledger-tealHover: #5EEAD4;
+    --color-ledger-tealLight: rgba(45, 212, 191, 0.16);
+    --color-ledger-gold: #FBBF24;
+    --color-ledger-amber: #FBBF24;
+    --color-ledger-amberLight: rgba(251, 191, 36, 0.16);
+    --color-ledger-red: #F87171;
+    --color-ledger-redLight: rgba(248, 113, 113, 0.16);
+    --color-ledger-sage: #34D399;
+    --color-ledger-sageLight: rgba(52, 211, 153, 0.16);
+    --color-ledger-overlay: rgba(3, 7, 18, 0.70);
+
+    --glass-card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+    --glass-subtle-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+    --glass-glow: 0 0 25px -2px rgba(45, 212, 191, 0.28);
+
+    --canvas-bg: #0C131D;
+    --surface-card: rgba(20, 31, 46, 0.72);
+    --surface-subtle: rgba(28, 43, 62, 0.65);
+    --surface-hover: rgba(36, 54, 78, 0.78);
+    --border-hairline: rgba(255, 255, 255, 0.12);
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-dark: rgba(255, 255, 255, 0.22);
+    --ink-primary: #F8FAFC;
+    --ink-secondary: #94A3B8;
+    --ink-tertiary: #64748B;
+    --ink-faint: #475569;
+    --brand-teal: #2DD4BF;
+    --brand-teal-hover: #5EEAD4;
+    --brand-teal-light: rgba(45, 212, 191, 0.16);
+
+    --chart-bar-start: #2DD4BF;
+    --chart-bar-end: rgba(45, 212, 191, 0.35);
+    --chart-today-start: #34D399;
+    --chart-today-end: #10B981;
+    --chart-future-bar: rgba(255, 255, 255, 0.12);
+    --chart-empty-bar: rgba(255, 255, 255, 0.06);
+
+    color-scheme: dark;
   }
 
   html {
@@ -28,36 +121,52 @@
   body {
     background-color: var(--canvas-bg);
     color: var(--ink-primary);
+    overflow-x: hidden;
   }
 }
 
 @layer components {
-  /* Institutional Fintech Button Foundations */
+  /* Billing & POS Glassmorphism Button Foundations */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-md text-xs sm:text-sm font-medium bg-ledger-ink text-white hover:bg-black active:translate-y-px transition-all shadow-subtle select-none;
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white hover:from-black hover:to-slate-950 active:scale-[0.98] transition-all shadow-[0_4px_14px_0_rgba(15,23,42,0.25)] border border-white/25 select-none dark:from-teal-500 dark:via-teal-400 dark:to-emerald-400 dark:text-[#0C131D] dark:hover:from-teal-400 dark:hover:to-emerald-300 dark:border-teal-300/40 dark:shadow-[0_0_18px_rgba(45,212,191,0.35)];
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[36px] rounded-md text-xs sm:text-sm font-medium border border-ledger-border bg-ledger-surface text-ledger-ink hover:bg-ledger-surfaceHover hover:border-ledger-borderDark active:translate-y-px transition-all shadow-subtle select-none;
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl text-xs sm:text-sm font-medium border border-ledger-border bg-ledger-surface backdrop-blur-md text-ledger-ink hover:bg-ledger-surfaceHover hover:border-ledger-borderDark active:scale-[0.98] transition-all shadow-subtle select-none dark:bg-ledger-surfaceSubtle dark:hover:bg-ledger-surfaceHover dark:border-ledger-border;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 min-h-[36px] rounded-md text-xs sm:text-sm font-medium text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle transition-colors select-none;
+    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 min-h-[38px] rounded-xl text-xs sm:text-sm font-medium text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surfaceSubtle transition-colors select-none;
   }
 
-  /* Institutional Input & Select Foundations */
+  /* Glassmorphism Input & Select Foundations */
   .input-base {
-    @apply w-full px-3 py-2 min-h-[36px] rounded-md border border-ledger-border bg-ledger-surface text-xs sm:text-sm text-ledger-ink placeholder:text-ledger-inkFaint hover:border-ledger-borderDark focus:border-ledger-teal focus:ring-1 focus:ring-ledger-teal transition-colors;
+    @apply w-full px-3.5 py-2 min-h-[38px] rounded-xl border border-ledger-border bg-ledger-surface backdrop-blur-md text-xs sm:text-sm text-ledger-ink placeholder:text-ledger-inkFaint hover:border-ledger-borderDark focus:border-ledger-teal focus:ring-1 focus:ring-ledger-teal transition-all dark:bg-ledger-surfaceSubtle dark:border-ledger-border;
   }
 
-  /* Editorial Card Foundation */
+  /* Glass Card Foundation with Solid Light & Translucent Dark */
   .card-base {
-    @apply bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-5 space-y-4;
+    @apply border rounded-2xl shadow-card p-5 space-y-4 transition-all duration-200 bg-white dark:bg-[#141F2E]/75 dark:backdrop-blur-xl;
+    border-color: var(--color-ledger-border);
+    box-shadow: var(--glass-card-shadow);
   }
 
-  /* Structured Micro-Badge Foundation */
+  /* Dedicated Glass Panel Classes */
+  .glass-panel {
+    @apply border rounded-2xl transition-all duration-200 bg-white dark:bg-[#141F2E]/75 dark:backdrop-blur-xl;
+    border-color: var(--color-ledger-border);
+    box-shadow: var(--glass-card-shadow);
+  }
+
+  .glass-elevated {
+    @apply border rounded-2xl transition-all duration-200 bg-white dark:bg-[#1C2B3E]/80 dark:backdrop-blur-2xl;
+    border-color: var(--color-ledger-border);
+    box-shadow: var(--glass-card-shadow);
+  }
+
+  /* Frosted Micro-Badge Foundation */
   .badge-tag {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono tracking-wider uppercase border border-ledger-borderSubtle bg-ledger-surfaceSubtle text-ledger-inkMuted;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono tracking-wider uppercase border border-ledger-borderSubtle bg-ledger-surfaceSubtle backdrop-blur-md text-ledger-inkMuted shadow-subtle;
   }
 }
 
@@ -84,5 +193,49 @@
   /* Focus visible accessibility */
   .focus-ring {
     @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ledger-teal focus-visible:ring-offset-2 focus-visible:ring-offset-ledger-bg;
+  }
+
+  /* Ambient Glass Glow Utilities */
+  .shadow-glass {
+    box-shadow: var(--glass-card-shadow);
+  }
+
+  .shadow-glass-subtle {
+    box-shadow: var(--glass-subtle-shadow);
+  }
+
+  .glow-teal {
+    box-shadow: var(--glass-glow);
+  }
+
+  @keyframes subtle-wave {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-2px) rotate(-3deg);
+    }
+    75% {
+      transform: translateY(-1px) rotate(3deg);
+    }
+  }
+
+  @keyframes scale-up {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-subtle-wave {
+    animation: subtle-wave 4s ease-in-out infinite;
+  }
+
+  .animate-scale-up {
+    animation: scale-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }

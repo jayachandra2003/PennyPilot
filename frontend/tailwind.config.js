@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -8,50 +9,61 @@ export default {
     extend: {
       colors: {
         ledger: {
-          bg: "#FAF8F5",            // Refined warm off-white canvas
-          surface: "#FFFFFF",       // Pure white content surfaces
-          surfaceSubtle: "#F5F2EA", // Subtle warm stone background for table headers & controls
-          surfaceHover: "#F7F5EE",  // Interactive hover state
-          border: "#E8E4DC",        // Crisp 1px hairline structural border
-          borderSubtle: "#F0ECE4",  // Secondary inner hairline dividers
-          borderDark: "#D6D0C4",    // Active/focused hairline border
-          ink: "#12161A",           // Deep charcoal/navy high-contrast typography
-          inkMuted: "#4E5661",      // Slate-charcoal secondary text & labels
-          inkSubtle: "#767E8A",     // Metadata, timestamps, column headers
-          inkFaint: "#9DA5B0",      // Disabled controls & placeholders
-          teal: "#0F766E",          // Deep forest-teal brand accent
-          tealHover: "#0D635C",     // Button hover state
-          tealLight: "#EBF5F3",     // Subtle teal highlight wash
-          amber: "#B45309",         // Restrained warm amber warning
-          amberLight: "#FEF3C7",
-          red: "#BE123C",           // Restrained crimson alert
-          redLight: "#FFF1F2",
-          sage: "#047857",          // Positive income & savings tone
-          sageLight: "#ECFDF5",
+          bg: "var(--color-ledger-bg, #F4F6F9)",
+          surface: "var(--color-ledger-surface, rgba(255, 255, 255, 0.75))",
+          surfaceSubtle: "var(--color-ledger-surfaceSubtle, rgba(248, 250, 252, 0.68))",
+          surfaceHover: "var(--color-ledger-surfaceHover, rgba(255, 255, 255, 0.92))",
+          border: "var(--color-ledger-border, rgba(255, 255, 255, 0.85))",
+          borderSubtle: "var(--color-ledger-borderSubtle, rgba(226, 232, 240, 0.70))",
+          borderDark: "var(--color-ledger-borderDark, rgba(203, 213, 225, 0.85))",
+          ink: "var(--color-ledger-ink, #0F172A)",
+          inkMuted: "var(--color-ledger-inkMuted, #475569)",
+          inkSubtle: "var(--color-ledger-inkSubtle, #64748B)",
+          inkFaint: "var(--color-ledger-inkFaint, #94A3B8)",
+          teal: "var(--color-ledger-teal, #0D9488)",
+          tealHover: "var(--color-ledger-tealHover, #0F766E)",
+          tealLight: "var(--color-ledger-tealLight, rgba(13, 148, 136, 0.12))",
+          amber: "var(--color-ledger-amber, #D97706)",
+          amberLight: "var(--color-ledger-amberLight, rgba(217, 119, 6, 0.12))",
+          red: "var(--color-ledger-red, #E11D48)",
+          redLight: "var(--color-ledger-redLight, rgba(225, 29, 72, 0.12))",
+          sage: "var(--color-ledger-sage, #059669)",
+          sageLight: "var(--color-ledger-sageLight, rgba(5, 150, 105, 0.12))",
+          gold: "var(--color-ledger-gold, #D97706)",
+          overlay: "var(--color-ledger-overlay, rgba(15, 23, 42, 0.40))",
         },
       },
       fontFamily: {
         sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
-        serif: ["Newsreader", "Fraunces", "Georgia", "serif"], // Editorial serif typography
-        mono: ["JetBrains Mono", "Courier New", "monospace"],  // Tabular financial figures
+        serif: ["Newsreader", "Fraunces", "Georgia", "serif"],
+        mono: ["JetBrains Mono", "Courier New", "monospace"],
       },
       borderRadius: {
-        sm: "3px",
-        DEFAULT: "5px",
-        md: "7px",
-        lg: "10px",        // Cards, panels, tables (avoiding generic puffy pills)
-        xl: "14px",        // Modals & slide-overs
-        "2xl": "18px",
+        sm: "4px",
+        DEFAULT: "6px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
+        "2xl": "20px",
+        "3xl": "26px",
       },
       boxShadow: {
+        xs: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
         hairline: "0 1px 2px 0 rgba(18, 22, 26, 0.03)",
-        subtle: "0 1px 2px 0 rgba(18, 22, 26, 0.04)",
-        card: "0 1px 3px 0 rgba(18, 22, 26, 0.04), 0 1px 2px -1px rgba(18, 22, 26, 0.02)",
-        float: "0 10px 25px -5px rgba(18, 22, 26, 0.08), 0 8px 10px -6px rgba(18, 22, 26, 0.03)",
-        modal: "0 20px 35px -5px rgba(18, 22, 26, 0.12), 0 10px 15px -5px rgba(18, 22, 26, 0.05)",
+        subtle: "0 2px 8px 0 rgba(18, 22, 26, 0.04)",
+        card: "var(--glass-card-shadow, 0 8px 32px 0 rgba(31, 38, 135, 0.07))",
+        float: "0 14px 35px -5px rgba(18, 22, 26, 0.10), 0 8px 12px -6px rgba(18, 22, 26, 0.05)",
+        modal: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.10) inset",
+        glow: "var(--glass-glow, 0 0 20px -2px rgba(13, 148, 136, 0.20))",
+        "glow-teal": "0 0 25px -2px rgba(45, 212, 191, 0.35)",
+        "glow-amber": "0 0 25px -2px rgba(251, 191, 36, 0.30)",
       },
       maxWidth: {
-        ledger: "1240px",
+        ledger: "1680px",
+        "ledger-prose": "760px",
+      },
+      backdropBlur: {
+        xs: '2px',
       },
     },
   },

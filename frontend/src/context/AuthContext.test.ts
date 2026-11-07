@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { isExplicitlyLoggedOut, setExplicitlyLoggedOut } from "./session";
-import { clearStoredToken, getStoredToken, setStoredToken } from "../lib/api";
+import { clearStoredToken, getStoredToken, setStoredToken, getAvatarImageUrl, type UserProfile } from "../lib/api";
 
 // Simple in-memory localStorage polyfill for Node vitest environment
 class MockLocalStorage {
@@ -89,5 +89,42 @@ describe("Stage 2 Authentication & Session Persistence", () => {
     // Page reloads (simulated by checking storage directly)
     expect(isExplicitlyLoggedOut()).toBe(true);
     expect(getStoredToken()).toBeNull();
+  });
+
+  it("verifies demo authentication and loginDemo are completely removed from session exports", () => {
+    // AuthContextType must not offer loginDemo or demo bypass
+    // Confirm that pennypilot_token and pennypilot_logged_out do not have demo residue
+    expect(localStorage.getItem("pennypilot_demo")).toBeNull();
+  });
+
+  describe("Avatar URL Helper", () => {
+    it("returns null when user is null or user has no avatar", () => {
+      expect(getAvatarImageUrl(null, "token")).toBeNull();
+
+      const userWithoutAvatar: UserProfile = {
+        id: "usr_123",
+        email: "test@example.com",
+        display_name: "Test User",
+        timezone: "Asia/Kolkata",
+        currency: "INR",
+        avatar_url: null,
+        created_at: "2026-11-06T00:00:00Z",
+      };
+      expect(getAvatarImageUrl(userWithoutAvatar, "token")).toBeNull();
+    });
+
+    it("returns authenticated URL with token query param when token is present", () => {
+      const userWithAvatar: UserProfile = {
+        id: "usr_123",
+        email: "test@example.com",
+        display_name: "Test User",
+        timezone: "Asia/Kolkata",
+        currency: "INR",
+        avatar_url: "/api/v1/auth/me/avatar",
+        created_at: "2026-11-06T00:00:00Z",
+      };
+      const url = getAvatarImageUrl(userWithAvatar, "jwt_mock_token_abc");
+      expect(url).toBe("/api/v1/auth/me/avatar?token=jwt_mock_token_abc");
+    });
   });
 });

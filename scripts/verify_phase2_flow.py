@@ -69,8 +69,19 @@ def setup_isolated_environment():
             timezone="Asia/Kolkata",
             currency="INR",
         )
+        user.email_verified = True
         db.add(user)
         db.flush()
+
+        from app.models.auth_tokens import EmailVerificationToken
+        from datetime import datetime, timezone
+        tok = EmailVerificationToken(
+            user_id=user.id,
+            token_hash="isolated_seed_verified_hash",
+            expires_at=datetime.now(timezone.utc),
+            consumed_at=datetime.now(timezone.utc),
+        )
+        db.add(tok)
 
         # Seed categories for parser and budgets
         cats_data = [

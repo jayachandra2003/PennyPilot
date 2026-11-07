@@ -2,8 +2,13 @@
 from datetime import date
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from app.core.rate_limiter import TokenBucketRateLimiter
 from app.core.security import create_access_token
+from app.db.base import Base
+from app.db.session import SessionLocal, get_db
 from app.domain.copilot import (
     DeterministicNarrativeGenerator,
     FactBundleBuilder,
@@ -14,13 +19,37 @@ from app.main import app
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.db.session import SessionLocal
 
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def isolated_db():
+    """Ensure complete test isolation using an in-memory SQLite database."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestingSession
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+
+
 def _setup_copilot_user():
-    db = SessionLocal()
+    override = app.dependency_overrides.get(get_db)
+    db = next(override()) if override else SessionLocal()
     u = db.query(User).filter(User.email == "copilot_test@pennypilot.in").first()
     if not u:
         u = User(
@@ -82,7 +111,8 @@ def test_intent_classification():
 
 def test_fact_bundle_and_deterministic_narrative():
     token, user_id = _setup_copilot_user()
-    db = SessionLocal()
+    override = app.dependency_overrides.get(get_db)
+    db = next(override()) if override else SessionLocal()
 
     facts = FactBundleBuilder.build(
         db=db,

@@ -44,6 +44,7 @@ venv.bak/
 *.sqlite*
 penny_pilot.db*
 test.db*
+uploads/
 
 # Node & Frontend
 node_modules/
@@ -81,3 +82,7 @@ logs/
 *.log
 scratch/
 tmp/
+
+# Diagnostic Audit Reports & Session Artifacts (Contain test credentials/emails)
+PENNYPILOT_*.md
+PHASE_5*.md

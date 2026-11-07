@@ -20,10 +20,12 @@ from app.domain.aggregates import (
 from app.domain.anomaly import detect_anomalies_mad
 from app.domain.budget_engine import calculate_budget_pace
 from app.domain.currency import format_inr, paise_to_rupees
+from app.domain.financial_plan import calculate_financial_plan_summary
 from app.domain.timezone import get_month_boundaries, today_ist
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.transaction import Transaction
+from app.models.user import User
 
 
 class FactBundleBuilder:
@@ -245,18 +247,59 @@ class FactBundleBuilder:
             "budget_pace": pace_info,
             "anomalies": current_month_anomalies,
             "top_expenses": top_expenses,
+            "financial_plan": calculate_financial_plan_summary(
+                monthly_income_paise=curr_income_paise,
+                allocated_budget_paise=total_budget_paise,
+                actual_expense_paise=curr_expense_paise,
+                savings_target_paise=getattr(db.query(User).filter(User.id == user_id).first(), "monthly_savings_target_paise", None),
+            ),
         }
 
 
 class IntentClassifier:
-    """Classifies user queries into specific financial intelligence intents."""
+    """Classifies user queries into conversational, app-help, navigation, and financial intents."""
+
+    @staticmethod
+    def get_navigation_action(intent: str, query: str = "") -> Optional[Dict[str, str]]:
+        actions = {
+            "app_about": {"label": "Explore Dashboard", "target": "dashboard"},
+            "nav_theme": {"label": "Open Appearance Settings", "target": "settings", "section": "appearance"},
+            "nav_account_deletion": {"label": "Open Account & Security", "target": "settings", "section": "account"},
+            "nav_monthly_statement": {"label": "Open Financial Insights", "target": "insights"},
+            "nav_add_transaction": {"label": "Open Transactions", "target": "transactions"},
+            "nav_profile_pic": {"label": "Open Profile Settings", "target": "settings", "section": "profile"},
+            "nav_scan_receipt": {"label": "Open Quick Add", "target": "quick_add"},
+            "nav_add_category": {"label": "Manage Categories", "target": "categories"},
+            "nav_legal": {"label": "Privacy Policy", "target": "privacy"},
+            "financial_spending": {"label": "View Transactions", "target": "transactions"},
+            "top_category": {"label": "View Categories", "target": "categories"},
+            "budget_pace": {"label": "View Budgets", "target": "budgets"},
+            "unusual_transactions": {"label": "View Financial Insights", "target": "insights"},
+            "spending_reduction": {"label": "Adjust Budgets", "target": "budgets"},
+            "savings_performance": {"label": "View Financial Insights", "target": "insights"},
+        }
+        return actions.get(intent)
 
     @staticmethod
     def classify(query: str, categories: List[Dict[str, Any]]) -> Tuple[str, Optional[str]]:
         """
         Classifies query into one of:
+        - greeting
+        - small_talk
+        - app_about
+        - nav_theme
+        - nav_account_deletion
+        - nav_monthly_statement
+        - nav_add_transaction
+        - nav_profile_pic
+        - nav_scan_receipt
+        - nav_add_category
+        - nav_legal
+        - spending_reduction
+        - savings_performance
         - expense_increase
         - top_category
+        - financial_spending
         - category_spend (with target_category name)
         - unusual_transactions
         - budget_pace
@@ -264,28 +307,169 @@ class IntentClassifier:
         - general_summary
         """
         q = query.lower().strip()
+        clean_q = re.sub(r"[^\w\s]", "", q).strip()
 
-        # 1. Unusual Transactions / Anomalies
-        if any(w in q for w in ["unusual", "anomaly", "anomalies", "outlier", "strange", "abnormal", "spike", "spikes"]):
-            return "unusual_transactions", None
+        # 1. Greetings & Salutations (pure greetings without financial keywords)
+        greetings = [
+            "hi", "hello", "hey", "good morning", "good evening", "good afternoon",
+            "namaste", "greetings", "hey there", "hi there", "hello copilot", "hi pennypilot",
+        ]
+        if clean_q in greetings or (clean_q.startswith(("hi ", "hello ", "hey ")) and len(clean_q.split()) <= 4):
+            if not any(w in clean_q for w in ["spend", "expense", "budget", "save", "cut", "reduce", "transaction", "category"]):
+                return "greeting", None
 
-        # 2. Expense Increase / MoM Change
-        if any(w in q for w in ["increase", "increased", "higher", "went up", "more this month", "why did my expenses", "cost more"]):
-            return "expense_increase", None
+        # 2. Conversational Small Talk
+        if any(w in clean_q for w in [
+            "how are you", "how are you doing", "how is it going", "hows it going",
+            "who are you", "what can you do", "what are your capabilities", "introduce yourself",
+        ]):
+            return "small_talk", None
 
-        # 3. Budget Pace
-        if any(w in q for w in ["budget", "on track", "over budget", "pace", "pacing", "ahead of budget", "overspend"]):
-            return "budget_pace", None
+        # 3. About PennyPilot (Application Overview)
+        if any(w in clean_q for w in [
+            "what is pennypilot", "tell me about pennypilot", "about pennypilot",
+            "how does pennypilot work", "what does pennypilot do", "what does this app do",
+            "what is this app",
+        ]):
+            return "app_about", None
 
-        # 4. Savings Advice
-        if any(w in q for w in ["savings rate", "save more", "improve savings", "better savings", "save money", "cut costs", "reduce spend"]):
+        # 4. App Navigation & How-To Questions
+        # 4a. Theme & Dark Mode
+        if any(w in q for w in [
+            "change my theme", "change theme", "dark mode", "light mode", "switch to dark",
+            "switch theme", "appearance settings", "theme settings", "toggle dark", "change to dark",
+            "how to switch to dark", "where can i change my theme",
+        ]):
+            return "nav_theme", None
+
+        # 4b. Account Deletion / Danger Zone
+        if any(w in q for w in [
+            "delete my account", "delete account", "close my account", "close account",
+            "danger zone", "purge my data", "delete user", "how do i delete my account",
+            "permanently delete",
+        ]):
+            return "nav_account_deletion", None
+
+        # 4c. Monthly Statement / Reports Download
+        if (
+            any(w in q for w in [
+                "download my monthly statement", "download monthly statement", "download my statement",
+                "download statement", "monthly statement", "download report", "download reports",
+                "pdf report", "docx report", "pdf statement", "export report", "where can i download",
+            ])
+            or (("download" in q or "export" in q) and ("statement" in q or "report" in q))
+        ):
+            return "nav_monthly_statement", None
+
+        # 4d. Add Transaction
+        if any(w in q for w in [
+            "how can i add a transaction", "how to add a transaction", "add a transaction",
+            "how do i add a transaction", "add transaction", "add expense", "how to add expenses",
+            "quick add", "record a transaction", "log an expense", "enter transaction", "record expense",
+        ]):
+            return "nav_add_transaction", None
+
+        # 4e. Profile Picture / Avatar
+        if any(w in q for w in [
+            "change my profile picture", "change profile picture", "how do i change my profile picture",
+            "profile picture", "change avatar", "upload avatar", "upload profile photo", "change picture",
+        ]):
+            return "nav_profile_pic", None
+
+        # 4f. Receipt Scanning / OCR
+        if any(w in q for w in [
+            "how do i scan a receipt", "how to scan a receipt", "scan a receipt",
+            "scan receipt", "upload receipt", "ocr receipt", "read receipt", "camera scan",
+        ]):
+            return "nav_scan_receipt", None
+
+        # 4g. Category Management
+        if any(w in q for w in [
+            "how do i add a new category", "add a new category", "add new category",
+            "create a category", "create category", "add category", "new category",
+            "manage categories", "custom category",
+        ]):
+            return "nav_add_category", None
+
+        # 4h. Legal / Compliance
+        if any(w in q for w in ["privacy policy", "terms of service", "security standards"]):
+            return "nav_legal", None
+
+        # 5. Spending Reduction / Cutbacks
+        if (
+            any(w in q for w in [
+                "reduce my spending", "reduce spending", "cut spending", "cut expenses",
+                "reduce expenses", "spend less", "where to reduce", "where do i need to reduce",
+                "cut costs", "cut back", "lower expenses", "lower my spending", "trim expenses",
+                "overspending", "spending too much", "save on expenses", "reduce spend",
+                "where should i reduce my spending",
+            ])
+            or (("reduce" in q or "cut" in q or "lower" in q or "trim" in q or "less" in q) and ("spending" in q or "expense" in q or "expenses" in q or "costs" in q))
+        ):
+            return "spending_reduction", None
+
+        # 6a. Savings Advice (How to improve / grow savings)
+        if (
+            any(w in q for w in [
+                "improve my savings", "improve savings", "improve my savings rate",
+                "save more", "better savings", "increase my savings", "increase savings",
+                "how to save more", "advice on savings", "how can i improve my savings",
+            ])
+            or ("improve" in q and ("savings" in q or "saving" in q or "rate" in q))
+        ):
             return "savings_advice", None
 
-        # 5. Top Category
-        if any(w in q for w in ["consumes most", "most of my income", "biggest expense", "highest category", "top spend", "where does my money go", "largest spend"]):
+        # 6b. Savings Performance / Evaluation
+        if (
+            any(w in q for w in [
+                "good at saving", "good at save", "saving money", "how is my savings",
+                "how are my savings", "am i saving", "saving well", "save enough",
+                "saving enough", "emergency fund", "how much did i save", "am i saving enough",
+            ])
+            or (("save" in q or "saving" in q or "savings" in q) and ("good" in q or "well" in q or "enough" in q or "am i" in q or "how is" in q or "how are" in q))
+        ):
+            return "savings_performance", None
+
+        # 7. Unusual Transactions / Anomalies
+        if any(w in q for w in [
+            "unusual", "anomaly", "anomalies", "outlier", "strange", "abnormal",
+            "spike", "spikes", "suspicious", "flagged", "unusual purchases",
+            "what are my unusual purchases", "which transactions look unusual",
+        ]):
+            return "unusual_transactions", None
+
+        # 8. Expense Increase / MoM Change
+        if any(w in q for w in [
+            "increase", "increased", "higher", "went up", "more this month",
+            "why did my expenses", "cost more", "expense grew", "spending grew",
+            "compare this month with last month", "compare with last month",
+        ]):
+            return "expense_increase", None
+
+        # 9. Budget Pace & Affordability
+        if any(w in q for w in [
+            "can i afford", "budget", "on track", "over budget", "pace", "pacing",
+            "ahead of budget", "overspend", "room in budget", "how much budget do i have left",
+            "am i on track with my monthly budget", "am i on track",
+        ]):
+            return "budget_pace", None
+
+        # 10. Top Category / Outflow Distribution
+        if any(w in q for w in [
+            "consumes most", "most of my income", "biggest expense", "highest category",
+            "top spend", "where does my money go", "largest spend", "main outflow",
+            "highest expenses", "which category has the highest expenses", "top spending category",
+        ]):
             return "top_category", None
 
-        # 6. Specific Category Spend
+        # 11. Total Spending
+        if any(w in q for w in [
+            "how much did i spend this month", "how much did i spend", "total expenses",
+            "what are my total expenses", "how much spent", "what did i spend",
+        ]):
+            return "financial_spending", None
+
+        # 12. Specific Category Spend
         for cat in categories:
             cat_name = cat["name"].lower()
             if cat_name in q:
@@ -324,7 +508,105 @@ class DeterministicNarrativeGenerator:
     """Generates guaranteed, 100% factual, zero-hallucination narratives directly from FactBundle."""
 
     @staticmethod
-    def generate(intent: str, target_cat: Optional[str], facts: Dict[str, Any]) -> str:
+    def generate(intent: str, target_cat: Optional[str], facts: Dict[str, Any], question: Optional[str] = None) -> str:
+        # Conversational & Application Navigation Responses
+        if intent == "greeting":
+            return (
+                "Hi! I'm your PennyPilot assistant. How can I help you today? "
+                "You can ask me about your monthly spending, budget pacing, savings performance, "
+                "or how to navigate and use PennyPilot."
+            )
+
+        if intent == "small_talk":
+            return (
+                "I'm doing well, thank you! I'm here and ready to help you analyze your financial ledger, "
+                "explore spending cutbacks, or guide you through any feature in PennyPilot. "
+                "What would you like to check today?"
+            )
+
+        if intent == "app_about":
+            return (
+                "**PennyPilot** is an institutional-grade, privacy-first personal financial intelligence platform "
+                "engineered with a strict **₹0 operating budget** and a **Zero Financial Hallucination** guarantee.\n\n"
+                "Key capabilities include:\n"
+                "• **Pure Integer Paise Arithmetic**: All balances and ceilings are computed deterministically without floating-point rounding errors.\n"
+                "• **Local ₹0 OCR Engine**: Extract merchant names, dates, line items, and totals directly from receipt images without paid APIs.\n"
+                "• **Real-Time Budget Pacing**: Linear calendar trajectory monitoring with proactive month-end overrun warnings.\n"
+                "• **MAD Anomaly Detection**: Statistical Median Absolute Deviation flagging of atypical spending spikes.\n"
+                "• **FactBundle AI Copilot**: Grounded multi-tier assistance explaining verified ledger telemetry."
+            )
+
+        if intent == "nav_theme":
+            return (
+                "To change your visual theme in PennyPilot:\n\n"
+                "1. Click your user profile avatar in the top-right corner of the navigation bar.\n"
+                "2. Select **Settings** and switch to the **Appearance** tab.\n"
+                "3. Choose between **Quiet Ledger (Light)**, **Midnight Ledger (Dark)**, or **System Schedule**.\n\n"
+                "Your theme preference applies immediately and persists across your active sessions."
+            )
+
+        if intent == "nav_account_deletion":
+            return (
+                "To permanently delete your account:\n\n"
+                "1. Navigate to **Settings** by clicking your avatar in the top-right corner.\n"
+                "2. Select the **Account & Security** tab.\n"
+                "3. Scroll to the bottom to find the **Danger Zone: Permanent Account Deletion** section.\n"
+                "4. Click **Delete Account** and confirm the irreversible purge.\n\n"
+                "*(Note: For security and privacy, this completely erases your login credentials, transactions, category ceilings, and historical statements. PennyPilot will never delete user data automatically.)*"
+            )
+
+        if intent == "nav_monthly_statement":
+            return (
+                "You can download your Monthly Financial Statement in **PDF**, **DOCX**, or **CSV** formats from two places:\n\n"
+                "1. **Financial Insights Page**: Navigate to the **Insights** tab and use the **Download Report** dropdown in the header.\n"
+                "2. **AI Copilot Page**: Click the **Monthly Statement** button in the header above to open the full executive report, then select your desired export format.\n\n"
+                "Statements include measured executive facts, category allocations, pacing telemetry, and anomaly audits."
+            )
+
+        if intent == "nav_add_transaction":
+            return (
+                "You can add a transaction to PennyPilot in three convenient ways:\n\n"
+                "1. **Quick Add (Natural Language)**: Click **Quick Add** in the top navigation or press `+`. Enter plain English like *'₹120 milk and ₹450 groceries today'* to automatically split and categorize purchases.\n"
+                "2. **Receipt Upload**: In the Quick Add modal, click **Upload Receipt** to process thermal or digital receipts using PennyPilot's local OCR engine.\n"
+                "3. **Manual Form**: In Quick Add, switch to the **Manual Form** tab to manually input amounts, categories, and dates."
+            )
+
+        if intent == "nav_profile_pic":
+            return (
+                "To update your profile avatar:\n\n"
+                "1. Open **Settings** from your user menu in the top navigation bar.\n"
+                "2. Under the **Personal Profile** tab, look for the **Profile Picture** card.\n"
+                "3. Click **Upload Picture** to select a JPG, PNG, or WebP photo (up to 5MB).\n"
+                "4. Inspect the live preview and click **Save Profile Details** to confirm. You can also click **Remove** anytime to revert to the initial badge."
+            )
+
+        if intent == "nav_scan_receipt":
+            return (
+                "To scan and extract data from a receipt:\n\n"
+                "1. Click **Quick Add** in the top navigation bar.\n"
+                "2. Select the **Upload Receipt** button.\n"
+                "3. Choose a receipt image (PNG, JPG, WebP) or PDF.\n"
+                "4. PennyPilot's local ₹0 RapidOCR engine will automatically detect the merchant, date, total amount, taxes, and itemized line items.\n"
+                "5. Review the extracted fields in the **Review Receipt Extraction** card, adjust if needed, and click **Save Transaction**."
+            )
+
+        if intent == "nav_add_category":
+            return (
+                "To create a new category:\n\n"
+                "1. Go to the **Categories** tab in the top navigation bar.\n"
+                "2. Click the **Create Category** button.\n"
+                "3. Enter the category name (e.g., *Education*, *Fitness*, *Subscriptions*), select **Expense** or **Income**, choose an icon, and pick an accent color.\n"
+                "4. Click **Create Category** to save. The new category is immediately available for transactions and budget allocations."
+            )
+
+        if intent == "nav_legal":
+            return (
+                "PennyPilot's legal and security policies are accessible anytime from the footer links:\n\n"
+                "• **Privacy Policy**: Details our strict user data isolation and $0 external analytics guarantee.\n"
+                "• **Terms of Service**: Application usage terms and institutional ledger disclaimers.\n"
+                "• **Security Standards**: Explains our bcrypt credential hashing, integer paise conventions, and CSRF protection."
+            )
+
         totals = facts["totals"]
         period = facts["period"]
         mom = facts["mom_delta"]
@@ -332,6 +614,94 @@ class DeterministicNarrativeGenerator:
         categories = facts["categories"]
         anomalies = facts["anomalies"]
         top_category = facts["top_category"]
+
+        if intent == "financial_spending":
+            return (
+                f"In {period['year']}-{period['month']:02d}, your total recorded spending is **{totals['expense_formatted']}** "
+                f"across {totals['transaction_count']} verified transactions. Total income is **{totals['income_formatted']}**, "
+                f"yielding a net retained surplus of **{totals['net_balance_formatted']}** (Savings Rate: **{totals['savings_rate_percent']}%**). "
+                f"Budget pacing is currently **{pace['status'].replace('_', ' ')}** ({pace['utilization_percent']}% utilized)."
+            )
+
+        # If intent is general_summary, inspect question keywords to provide question-aware answers
+        q_lower = (question or "").lower()
+        if intent == "general_summary" and q_lower:
+            if any(w in q_lower for w in ["reduce", "cut", "lower", "trim", "less"]):
+                intent = "spending_reduction"
+            elif any(w in q_lower for w in ["save", "saving", "savings"]):
+                intent = "savings_performance"
+            elif any(w in q_lower for w in ["unusual", "anomaly", "spike", "outlier"]):
+                intent = "unusual_transactions"
+            elif any(w in q_lower for w in ["budget", "pace", "track", "afford"]):
+                intent = "budget_pace"
+
+        # 1. Spending Reduction Intent
+        if intent in ("spending_reduction", "savings_advice"):
+            if not categories:
+                return "You have not recorded any expenses yet for this month, so no spending reductions are necessary."
+            
+            top1 = categories[0]
+            top1_sav = format_inr(int(top1["total_paise"] * 0.15))
+            top2 = categories[1] if len(categories) > 1 else None
+
+            msg = (
+                f"To reduce your spending effectively, focus on your largest outflow areas:\n\n"
+                f"1. **{top1['category_name']}**: Currently your highest expense at **{top1['formatted_total']}** "
+                f"({top1['percentage']}% of total living costs across {top1['transaction_count']} transactions). "
+                f"Trimming discretionary purchases here by 15% would save an extra **{top1_sav}** per month.\n"
+            )
+            if top2:
+                top2_sav = format_inr(int(top2["total_paise"] * 0.15))
+                msg += (
+                    f"2. **{top2['category_name']}**: Your second largest category at **{top2['formatted_total']}** "
+                    f"({top2['percentage']}% of spending). A 15% reduction here would preserve another **{top2_sav}**.\n"
+                )
+
+            if anomalies:
+                top_anomaly = anomalies[0]
+                msg += (
+                    f"\n**Atypical Outlier Flagged:** Look into **{top_anomaly['description']}** "
+                    f"({top_anomaly['amount_formatted']}), which is {top_anomaly['evidence']}.\n"
+                )
+
+            msg += (
+                f"\nExecuting these reductions would elevate your current savings rate from "
+                f"**{totals['savings_rate_percent']}%** to over **{min(99.0, totals['savings_rate_percent'] + 5.0)}%**."
+            )
+            return msg.strip()
+
+        # 2. Savings Performance Intent
+        elif intent == "savings_performance":
+            rate = totals["savings_rate_percent"]
+            net = totals["net_balance_formatted"]
+            inc = totals["income_formatted"]
+            exp = totals["expense_formatted"]
+
+            if rate >= 50.0:
+                verdict = (
+                    f"**Yes, your savings performance is exceptional.** You have preserved **{rate}%** of your income "
+                    f"this month, accumulating a verified net surplus of **{net}** (Inflow: {inc}, Outflow: {exp}). "
+                    f"This far exceeds the standard institutional 20–25% financial health benchmark."
+                )
+            elif rate >= 20.0:
+                verdict = (
+                    f"**Yes, you are doing well at saving money.** Your verified savings rate is **{rate}%** "
+                    f"with a net capital accumulation of **{net}** (Inflow: {inc}, Outflow: {exp}). "
+                    f"This comfortably fulfills the standard 20% savings rule for building a liquid emergency cushion."
+                )
+            elif rate > 0.0:
+                verdict = (
+                    f"Your savings rate is currently **{rate}%** with **{net}** retained from **{inc}** of income. "
+                    f"While you are cash-flow positive, financial planning guidelines recommend aiming for a **20%** baseline. "
+                    f"Trimming top outflows like **{top_category['category_name'] if top_category else 'living costs'}** can help elevate your rate."
+                )
+            else:
+                verdict = (
+                    f"Currently, your recorded expenses (**{exp}**) meet or exceed your verified income (**{inc}**), "
+                    f"resulting in a net balance of **{net}** (savings rate: 0%). "
+                    f"Focusing on budget ceilings and curtailing discretionary purchases will help restore a positive savings rate."
+                )
+            return verdict
 
         if intent == "expense_increase":
             prev = facts["previous_month"]
@@ -551,6 +921,23 @@ class FactBundleVerifier:
             if cleaned:
                 valid_amounts.add(cleaned)
                 valid_amounts.add(cleaned.split(".")[0])
+
+        plan = facts.get("financial_plan", {})
+        for pl_key in [
+            "monthly_income_formatted",
+            "allocated_budget_formatted",
+            "planned_savings_formatted",
+            "unallocated_income_formatted",
+            "actual_savings_formatted",
+            "savings_target_formatted",
+            "remaining_budget_formatted",
+        ]:
+            val = plan.get(pl_key)
+            if val:
+                cleaned = re.sub(r"[^\d.]", "", val)
+                if cleaned:
+                    valid_amounts.add(cleaned)
+                    valid_amounts.add(cleaned.split(".")[0])
 
         pattern = re.compile(r"(?:₹|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE)
         found_amounts = pattern.findall(narrative)

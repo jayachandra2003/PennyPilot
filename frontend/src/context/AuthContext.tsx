@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import type { UserProfile } from "../lib/api";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import type { AuthResponse, UserProfile } from "../lib/api";
 import {
+  apiLogout,
   clearStoredToken,
   fetchCurrentUser,
   getStoredToken,
   login as apiLogin,
+  registerUser as apiRegister,
 } from "../lib/api";
 import { isExplicitlyLoggedOut, setExplicitlyLoggedOut } from "./session";
 
@@ -13,8 +15,9 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
+  register: (email: string, pass: string, name: string) => Promise<AuthResponse>;
   logout: () => void;
-  loginDemo: () => Promise<void>;
+  updateUser: (data: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,82 +27,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(getStoredToken());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const initAuth = async () => {
+  const logout = useCallback(async () => {
+    setExplicitlyLoggedOut(true);
+    clearStoredToken();
+    setUser(null);
+    setToken(null);
+    try {
+      await apiLogout();
+    } catch {
+      // Non-fatal
+    }
+  }, []);
+
+  const initAuth = useCallback(async () => {
     setIsLoading(true);
     const existing = getStoredToken();
-    if (existing) {
+
+    // Check for Google OAuth success callback signal
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get("auth") === "success") {
+        setExplicitlyLoggedOut(false);
+        if (window.history?.replaceState) {
+          searchParams.delete("auth");
+          const remainingQuery = searchParams.toString();
+          const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "") + (window.location.hash || "");
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      }
+    }
+
+    if (!isExplicitlyLoggedOut()) {
       try {
         const u = await fetchCurrentUser();
         setUser(u);
         setToken(existing);
-        setExplicitlyLoggedOut(false);
         setIsLoading(false);
         return;
-      } catch (_err) {
+      } catch {
         clearStoredToken();
         setToken(null);
       }
     }
 
-    // Do not auto-login if the user explicitly signed out
-    if (isExplicitlyLoggedOut()) {
-      setUser(null);
-      setToken(null);
-      setIsLoading(false);
-      return;
-    }
-
-    // Auto-login with Demo account strictly in development mode for evaluator ease
-    if (import.meta.env.DEV) {
-      try {
-        const auth = await apiLogin("demo@pennypilot.in", "DemoPassword123!");
-        setUser(auth.user);
-        setToken(auth.access_token);
-      } catch (_e) {
-        // Offline or server starting
-        setUser(null);
-        setToken(null);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // Production builds never automatically log in unauthenticated users
-      setUser(null);
-      setToken(null);
-      setIsLoading(false);
-    }
-  };
+    // Default: clean unauthenticated entry path. No automatic demo authentication.
+    setUser(null);
+    setToken(null);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
     initAuth();
-  }, []);
+
+    const handleAuthExpired = () => {
+      logout();
+    };
+
+    window.addEventListener("pennypilot:auth_expired", handleAuthExpired);
+    return () => {
+      window.removeEventListener("pennypilot:auth_expired", handleAuthExpired);
+    };
+  }, [initAuth, logout]);
 
   const login = async (email: string, pass: string) => {
-    setIsLoading(true);
-    try {
-      const auth = await apiLogin(email, pass);
+    const auth = await apiLogin(email, pass);
+    setUser(auth.user);
+    setToken(auth.access_token || null);
+    setExplicitlyLoggedOut(false);
+  };
+
+  const register = async (email: string, pass: string, name: string): Promise<AuthResponse> => {
+    const auth = await apiRegister({
+      email,
+      password: pass,
+      display_name: name,
+    });
+    if (auth.access_token) {
       setUser(auth.user);
       setToken(auth.access_token);
       setExplicitlyLoggedOut(false);
-    } finally {
-      setIsLoading(false);
     }
+    return auth;
   };
 
-  const loginDemo = async () => {
-    setExplicitlyLoggedOut(false);
-    return login("demo@pennypilot.in", "DemoPassword123!");
-  };
-
-  const logout = () => {
-    setExplicitlyLoggedOut(true);
-    clearStoredToken();
-    setUser(null);
-    setToken(null);
+  const updateUser = (data: Partial<UserProfile>) => {
+    setUser((prev) => (prev ? { ...prev, ...data } : null));
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, loginDemo }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isLoading,
+        login,
+        register,
+        logout,
+        updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

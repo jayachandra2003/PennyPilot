@@ -103,25 +103,22 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
   const barWidth = Math.max(4, Math.floor(chartWidth / totalDays) - 3);
 
   return (
-    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5 min-w-0 overflow-hidden">
+    <div className="glass-panel p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5 min-w-0 overflow-hidden rounded-2xl h-full flex flex-col justify-between">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ledger-borderSubtle pb-3 sm:pb-4 min-w-0">
         <div>
-          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
-            Spending Velocity
-          </span>
           <h2 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
             Financial Trajectory & Daily Velocity
           </h2>
         </div>
 
         {/* View Mode Toggle */}
-        <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5 self-start sm:self-auto">
+        <div className="inline-flex items-center bg-ledger-surfaceSubtle/80 backdrop-blur-md border border-ledger-border rounded-xl p-0.5 self-start sm:self-auto shadow-xs">
           <button
             onClick={() => setViewMode("daily")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === "daily"
-                ? "bg-ledger-surface text-ledger-ink font-semibold shadow-hairline border border-ledger-borderSubtle"
+                ? "bg-ledger-surface text-ledger-ink font-semibold shadow-xs border border-ledger-borderSubtle"
                 : "text-ledger-inkMuted hover:text-ledger-ink"
             }`}
           >
@@ -130,9 +127,9 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
           </button>
           <button
             onClick={() => setViewMode("cumulative")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === "cumulative"
-                ? "bg-ledger-surface text-ledger-ink font-semibold shadow-hairline border border-ledger-borderSubtle"
+                ? "bg-ledger-surface text-ledger-ink font-semibold shadow-xs border border-ledger-borderSubtle"
                 : "text-ledger-inkMuted hover:text-ledger-ink"
             }`}
           >
@@ -143,7 +140,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
       </div>
 
       {/* 4 Summary Telemetry Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 bg-ledger-surfaceSubtle/60 border border-ledger-borderSubtle rounded-md p-3 sm:p-4 min-w-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 bg-ledger-surfaceSubtle/50 backdrop-blur-md border border-ledger-borderSubtle/60 rounded-xl p-3 sm:p-4 min-w-0">
         <div className="space-y-0.5 min-w-0">
           <span className="text-[10px] sm:text-[11px] font-mono uppercase text-ledger-inkSubtle block truncate">Monthly Budget</span>
           <div className="font-serif text-base sm:text-lg font-bold text-ledger-ink tabular-nums truncate">
@@ -184,16 +181,16 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full select-none">
           <defs>
             <linearGradient id="activeBarGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#12161A" />
-              <stop offset="100%" stopColor="#3B4450" />
+              <stop offset="0%" stopColor="var(--chart-bar-start, #12161A)" />
+              <stop offset="100%" stopColor="var(--chart-bar-end, #3B4450)" />
             </linearGradient>
             <linearGradient id="todayBarGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0F766E" />
-              <stop offset="100%" stopColor="#14B8A6" />
+              <stop offset="0%" stopColor="var(--chart-today-start, #0F766E)" />
+              <stop offset="100%" stopColor="var(--chart-today-end, #14B8A6)" />
             </linearGradient>
             <linearGradient id="cumulativeAreaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0F766E" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#0F766E" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="var(--color-ledger-teal)" stopOpacity="0.20" />
+              <stop offset="100%" stopColor="var(--color-ledger-teal)" stopOpacity="0.0" />
             </linearGradient>
           </defs>
 
@@ -208,7 +205,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                   y1={y}
                   x2={width - padding.right}
                   y2={y}
-                  stroke="#EFECE6"
+                  stroke="var(--color-ledger-borderSubtle)"
                   strokeWidth="1"
                 />
                 <text
@@ -232,7 +229,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                 y1={getDailyY(dailyTargetPacePaise)}
                 x2={width - padding.right}
                 y2={getDailyY(dailyTargetPacePaise)}
-                stroke="#767E8A"
+                stroke="var(--color-ledger-inkSubtle)"
                 strokeWidth="1.5"
                 strokeDasharray="4 4"
               />
@@ -276,8 +273,8 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                           : hasSpend
                           ? "url(#activeBarGradient)"
                           : isFuture
-                          ? "#E8E4DC"
-                          : "#D6D0C4"
+                          ? "var(--chart-future-bar, #E8E4DC)"
+                          : "var(--chart-empty-bar, #D6D0C4)"
                       }
                       opacity={hoveredDay && hoveredDay !== s.day ? 0.35 : 1}
                     />
@@ -288,7 +285,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                         cx={x + barWidth / 2}
                         cy={padding.top + chartHeight + 14}
                         r="2.5"
-                        fill="#0F766E"
+                        fill="var(--color-ledger-teal)"
                       />
                     )}
                   </g>
@@ -306,7 +303,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                 y1={getCumulativeY(series[0]?.targetPacePaise || 0)}
                 x2={getX(totalDays)}
                 y2={getCumulativeY(totalBudgetPaise)}
-                stroke="#767E8A"
+                stroke="var(--color-ledger-inkSubtle)"
                 strokeWidth="1.5"
                 strokeDasharray="4 4"
               />
@@ -319,7 +316,7 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                 <path
                   d={spendPath}
                   fill="none"
-                  stroke="#0F766E"
+                  stroke="var(--color-ledger-teal)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -332,8 +329,8 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
                   cx={getX(currentDay)}
                   cy={getCumulativeY(currentActualSpend)}
                   r="4.5"
-                  fill="#0F766E"
-                  stroke="#FFFFFF"
+                  fill="var(--color-ledger-teal)"
+                  stroke="var(--color-ledger-surface)"
                   strokeWidth="2"
                 />
               )}
@@ -357,11 +354,11 @@ export const BudgetIntelligenceCard: React.FC<BudgetIntelligenceCardProps> = ({
         {/* Hover Tooltip Overlay */}
         {hoveredDay && viewMode === "daily" && (
           <div
-            className="absolute top-2 right-4 bg-ledger-ink text-white px-2.5 py-1.5 rounded shadow-float text-xs pointer-events-none transition-all flex items-center gap-2 border border-ledger-borderDark"
+            className="absolute top-2 right-4 bg-slate-900 text-white dark:bg-ledger-surfaceSubtle dark:text-ledger-ink px-2.5 py-1.5 rounded shadow-float text-xs pointer-events-none transition-all flex items-center gap-2 border border-slate-700 dark:border-ledger-border"
           >
             <Calendar className="w-3.5 h-3.5 text-ledger-teal" />
             <span className="font-mono">Day {hoveredDay}:</span>
-            <span className="font-serif font-bold text-white tabular-nums">
+            <span className="font-serif font-bold text-white dark:text-ledger-teal tabular-nums">
               {formatINR(dailySpend[hoveredDay] || 0)}
             </span>
           </div>

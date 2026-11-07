@@ -8,7 +8,17 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.svg', 'favicon.ico', 'robots.txt', 'pwa-192x192.svg', 'pwa-512x512.svg'],
+      includeAssets: [
+        'favicon.svg',
+        'favicon.ico',
+        'favicon-32x32.png',
+        'apple-touch-icon.png',
+        'robots.txt',
+        'pwa-192x192.png',
+        'pwa-512x512.png',
+        'pwa-192x192.svg',
+        'pwa-512x512.svg',
+      ],
       manifest: {
         name: 'PennyPilot — AI Financial Intelligence',
         short_name: 'PennyPilot',
@@ -20,6 +30,24 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
             src: 'pwa-192x192.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
@@ -30,12 +58,6 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any',
-          },
-          {
-            src: 'pwa-512x512.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'maskable',
           },
         ],
       },
@@ -62,7 +84,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

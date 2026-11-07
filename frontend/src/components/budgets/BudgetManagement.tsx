@@ -14,22 +14,15 @@ import {
   CheckCircle2,
   AlertCircle,
   Trash2,
-  ShoppingCart,
-  Utensils,
-  Car,
-  Zap,
-  Home,
-  Banknote,
-  Briefcase,
-  HeartPulse,
-  Film,
-  ShoppingBag,
   Tag,
 } from "lucide-react";
 import type { CategoryBudgetStatus, MonthlyBudgetOverview } from "../../lib/api";
 import { fetchBudgetPace, setMonthlyBudgets } from "../../lib/api";
 import { formatINR, paiseToRupees, rupeesToPaise } from "../../lib/currency";
 import { useToast } from "../common/Toast";
+import { BudgetManagementSkeleton } from "../common/Skeleton";
+import { GlassIcon, CategoryGlassIcon } from "../common/GlassIcon";
+import { CalendarMonthPicker } from "../common/CalendarMonthPicker";
 
 interface BudgetManagementProps {
   year: number;
@@ -38,34 +31,6 @@ interface BudgetManagementProps {
   onMonthChange: (year: number, month: number) => void;
   isLoading: boolean;
 }
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
-const CATEGORY_ICONS: Record<string, React.ElementType> = {
-  "shopping-cart": ShoppingCart,
-  cart: ShoppingCart,
-  utensils: Utensils,
-  dining: Utensils,
-  car: Car,
-  transportation: Car,
-  zap: Zap,
-  utilities: Zap,
-  home: Home,
-  housing: Home,
-  banknote: Banknote,
-  salary: Banknote,
-  briefcase: Briefcase,
-  freelance: Briefcase,
-  "heart-pulse": HeartPulse,
-  healthcare: HeartPulse,
-  film: Film,
-  entertainment: Film,
-  "shopping-bag": ShoppingBag,
-  shopping: ShoppingBag,
-};
 
 export const BudgetManagement: React.FC<BudgetManagementProps> = ({
   year,
@@ -88,7 +53,6 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
   });
 
   const monthStr = `${year}-${month.toString().padStart(2, "0")}-01`;
-  const monthLabel = `${MONTH_NAMES[month - 1]} ${year}`;
 
   const setBudgetMutation = useMutation({
     mutationFn: (budgets: Array<{ category_id?: string; limit_paise: number }>) =>
@@ -172,39 +136,44 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
       case "on_track":
         return {
           label: "On Track",
-          className: "bg-ledger-sageLight text-ledger-sage border-ledger-sage/20",
+          dotColor: "bg-emerald-500",
+          className: "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/25",
           icon: CheckCircle2,
-          borderBar: "bg-ledger-sage",
+          borderBar: "bg-emerald-500",
         };
       case "caution":
         return {
           label: "Caution",
-          className: "bg-ledger-amberLight text-ledger-amber border-ledger-amber/30",
+          dotColor: "bg-amber-500",
+          className: "bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30",
           icon: AlertTriangle,
-          borderBar: "bg-ledger-amber",
+          borderBar: "bg-amber-500",
         };
       case "over_pace":
         return {
           label: "Over Pace",
-          className: "bg-ledger-amberLight text-ledger-amber border-ledger-amber/30",
+          dotColor: "bg-amber-500",
+          className: "bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30",
           icon: Clock,
-          borderBar: "bg-ledger-amber",
+          borderBar: "bg-amber-500",
         };
       case "over_budget":
         return {
           label: "Over Budget",
-          className: "bg-ledger-redLight text-ledger-red border-ledger-red/30",
+          dotColor: "bg-rose-500",
+          className: "bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-500/30",
           icon: AlertCircle,
-          borderBar: "bg-ledger-red",
+          borderBar: "bg-rose-500",
         };
       case "no_budget":
       case "unbudgeted":
       default:
         return {
-          label: "No Budget",
-          className: "bg-ledger-surfaceSubtle text-ledger-inkSubtle border-ledger-borderSubtle",
+          label: "Uncapped",
+          dotColor: "bg-slate-400",
+          className: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300/40 dark:border-white/10",
           icon: Tag,
-          borderBar: "bg-ledger-border",
+          borderBar: "bg-slate-300",
         };
     }
   };
@@ -213,39 +182,36 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
 
   return (
     <div className="space-y-5 md:space-y-6 min-w-0">
-      {/* 1. Header & Institutional Month Switcher */}
-      <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
+      {/* 1. Header & Institutional Month Switcher with CalendarMonthPicker */}
+      <div className="glass-panel p-4 sm:p-5 md:p-6 space-y-4 min-w-0 rounded-2xl relative z-30">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-ledger-borderSubtle pb-4 min-w-0">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
-                Capital Allocation
-              </span>
-            </div>
             <h2 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-ledger-ink tracking-tight">
               Budget Management
             </h2>
             <p className="text-xs text-ledger-inkMuted mt-0.5">
-              Deterministic spending limits and real-time pacing calculated in integer paise.
+              Monthly spending limits and real-time budget pacing.
             </p>
           </div>
 
-          {/* Month Navigator Controller (>= 44px Touch Targets) */}
-          <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0 bg-ledger-surfaceSubtle border border-ledger-border rounded-md p-0.5 sm:p-1 select-none">
+          {/* Month Navigator Controller with CalendarMonthPicker (>= 44px Touch Targets) */}
+          <div className="flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-xl p-0.5 shrink-0 shadow-xs relative z-40 select-none self-start sm:self-auto">
             <button
               onClick={handlePrevMonth}
               aria-label="Previous month"
-              className="p-2 min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink focus-ring transition-colors"
+              className="p-2 min-w-[44px] min-h-[44px] sm:p-1.5 sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-lg hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink focus-ring transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-2 font-serif font-bold text-xs sm:text-sm text-ledger-ink tabular-nums whitespace-nowrap">
-              {monthLabel}
-            </span>
+            <CalendarMonthPicker
+              year={year}
+              month={month}
+              onSelect={onMonthChange}
+            />
             <button
               onClick={handleNextMonth}
               aria-label="Next month"
-              className="p-2 min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink focus-ring transition-colors"
+              className="p-2 min-w-[44px] min-h-[44px] sm:p-1.5 sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-lg hover:bg-ledger-surface text-ledger-inkMuted hover:text-ledger-ink focus-ring transition-colors cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -260,9 +226,8 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 Total Budget
               </span>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ledger-teal" />
-              </div>
+              <GlassIcon icon={Target} variant="teal" size="xs" className="sm:hidden" />
+              <GlassIcon icon={Target} variant="teal" size="sm" className="hidden sm:inline-flex" />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div className="font-serif text-base sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate">
@@ -281,9 +246,8 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 Month Spend
               </span>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <ArrowDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ledger-inkMuted" />
-              </div>
+              <GlassIcon icon={ArrowDownRight} variant="rose" size="xs" className="sm:hidden" />
+              <GlassIcon icon={ArrowDownRight} variant="rose" size="sm" className="hidden sm:inline-flex" />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div className="font-serif text-base sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate">
@@ -302,13 +266,18 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 Remaining Buffer
               </span>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                {remaining >= 0 ? (
-                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ledger-sage" />
-                ) : (
-                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ledger-red" />
-                )}
-              </div>
+              <GlassIcon
+                icon={remaining >= 0 ? Shield : AlertCircle}
+                variant={remaining >= 0 ? "emerald" : "rose"}
+                size="xs"
+                className="sm:hidden"
+              />
+              <GlassIcon
+                icon={remaining >= 0 ? Shield : AlertCircle}
+                variant={remaining >= 0 ? "emerald" : "rose"}
+                size="sm"
+                className="hidden sm:inline-flex"
+              />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div
@@ -331,16 +300,16 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
               <span className="text-[10px] sm:text-xs font-medium text-ledger-inkMuted uppercase tracking-wider truncate">
                 Spending Pace
               </span>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-ledger-surfaceSubtle text-ledger-inkMuted flex items-center justify-center border border-ledger-border shrink-0">
-                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ledger-teal" />
-              </div>
+              <GlassIcon icon={Clock} variant="indigo" size="xs" className="sm:hidden" />
+              <GlassIcon icon={Clock} variant="indigo" size="sm" className="hidden sm:inline-flex" />
             </div>
             <div className="space-y-0.5 sm:space-y-1 my-1 sm:my-2 min-w-0">
               <div className="font-serif text-base sm:text-2xl lg:text-3xl font-bold text-ledger-ink tracking-tight tabular-nums truncate flex items-center gap-1.5">
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] sm:text-xs font-sans font-semibold border ${currentPaceBadge.className}`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-sans font-semibold border ${currentPaceBadge.className} shadow-xs`}
                 >
-                  {currentPaceBadge.label}
+                  <span className={`w-1.5 h-1.5 rounded-full ${currentPaceBadge.dotColor} shrink-0`} />
+                  <span>{currentPaceBadge.label}</span>
                 </span>
               </div>
               <div className="text-[10px] sm:text-[11px] text-ledger-inkSubtle truncate">
@@ -351,34 +320,39 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
         </div>
       </div>
 
-      {/* 3. Spending Pace Visualization & Burn Rate Card */}
-      <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
+      {/* 3. Streamlined Monthly Spending Velocity Card */}
+      <div className="glass-panel p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden rounded-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ledger-borderSubtle pb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
-                Timeline Calibration
-              </span>
-            </div>
             <h3 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
-              Monthly Spending Velocity & Pacing
+              Monthly Spending Velocity
             </h3>
+            <p className="text-xs text-ledger-inkMuted mt-0.5">
+              Daily velocity targets and pacing trajectory.
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-ledger-inkMuted font-mono">
-              Timeline: <span className="font-semibold text-ledger-ink">Day {elapsedDays} of {totalDays}</span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-sans font-medium border ${currentPaceBadge.className} shadow-xs`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${currentPaceBadge.dotColor} shrink-0`} />
+              <span>
+                {utilization > scheduledPercent
+                  ? `${(utilization - scheduledPercent).toFixed(1)}% ahead of pace`
+                  : `${(scheduledPercent - utilization).toFixed(1)}% under pace`}
+              </span>
             </span>
           </div>
         </div>
 
         {/* Dual-Indicator Progress Track */}
         <div className="space-y-2 pt-1">
-          <div className="flex items-center justify-between text-xs text-ledger-inkMuted">
+          <div className="flex items-center justify-between text-xs text-ledger-inkMuted font-medium">
             <span>
               Budget Consumed: <strong className="text-ledger-ink tabular-nums font-mono">{utilization}%</strong>
             </span>
             <span>
-              Expected at Day {elapsedDays}: <strong className="text-ledger-ink tabular-nums font-mono">{scheduledPercent}%</strong>
+              Calendar Elapsed: <strong className="text-ledger-ink tabular-nums font-mono">{scheduledPercent}%</strong> (Day {elapsedDays} of {totalDays})
             </span>
           </div>
 
@@ -406,14 +380,14 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
 
           <div className="flex items-center justify-between text-[11px] text-ledger-inkSubtle font-mono">
             <span>Day 1 (0%)</span>
-            <span className="hidden sm:inline text-ledger-inkMuted">
+            <span className="text-ledger-inkMuted">
               {utilization > scheduledPercent ? (
-                <span className="text-ledger-amber font-semibold">
-                  Spending {(utilization - scheduledPercent).toFixed(1)}% ahead of scheduled timeline
+                <span className="text-amber-700 dark:text-amber-400 font-semibold">
+                  Spending {(utilization - scheduledPercent).toFixed(1)}% ahead of calendar timeline
                 </span>
               ) : (
-                <span className="text-ledger-sage font-semibold">
-                  Spending {(scheduledPercent - utilization).toFixed(1)}% under scheduled timeline
+                <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                  Spending {(scheduledPercent - utilization).toFixed(1)}% under calendar timeline
                 </span>
               )}
             </span>
@@ -421,66 +395,52 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
           </div>
         </div>
 
-        {/* 4-Point Comparison Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 pt-2 border-t border-ledger-borderSubtle text-xs">
-          <div className="p-2.5 rounded-md bg-ledger-surfaceSubtle/60 border border-ledger-borderSubtle">
-            <span className="text-[10px] font-mono uppercase text-ledger-inkSubtle block">Actual Spend</span>
-            <span className="font-serif font-bold text-sm sm:text-base text-ledger-ink tabular-nums block mt-0.5">
-              {pace?.spent_formatted || formatINR(totalSpent)}
+        {/* High-Utility Forward Velocity Telemetry */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-ledger-borderSubtle">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold block">
+              Daily Spending Velocity
+            </span>
+            <span className="font-serif font-bold text-lg text-slate-900 dark:text-slate-100 tabular-nums block mt-1">
+              {formatINR(Math.round(totalSpent / Math.max(1, elapsedDays)))}
+              <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400 ml-1">/ day</span>
+            </span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+              Recorded average per day
             </span>
           </div>
 
-          <div className="p-2.5 rounded-md bg-ledger-surfaceSubtle/60 border border-ledger-borderSubtle">
-            <span className="text-[10px] font-mono uppercase text-ledger-inkSubtle block">Target Pace (Day {elapsedDays})</span>
-            <span className="font-serif font-bold text-sm sm:text-base text-ledger-ink tabular-nums block mt-0.5">
-              {pace?.target_pace_formatted || formatINR(Math.round((totalLimit * elapsedDays) / totalDays))}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold block">
+              Allowable Daily Target
+            </span>
+            <span className="font-serif font-bold text-lg text-teal-700 dark:text-teal-400 tabular-nums block mt-1">
+              {formatINR(Math.max(0, Math.round(remaining / Math.max(1, totalDays - elapsedDays))))}
+              <span className="text-xs font-sans font-normal text-slate-500 dark:text-slate-400 ml-1">/ day</span>
+            </span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+              Target for next {Math.max(1, totalDays - elapsedDays)} days
             </span>
           </div>
 
-          <div className="p-2.5 rounded-md bg-ledger-surfaceSubtle/60 border border-ledger-borderSubtle">
-            <span className="text-[10px] font-mono uppercase text-ledger-inkSubtle block">Remaining Buffer</span>
-            <span
-              className={`font-serif font-bold text-sm sm:text-base tabular-nums block mt-0.5 ${
-                remaining >= 0 ? "text-ledger-sage" : "text-ledger-red"
-              }`}
-            >
-              {pace?.remaining_formatted || formatINR(remaining)}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold block">
+              Projected Month-End Spend
             </span>
-          </div>
-
-          <div className="p-2.5 rounded-md bg-ledger-surfaceSubtle/60 border border-ledger-borderSubtle">
-            <span className="text-[10px] font-mono uppercase text-ledger-inkSubtle block">Projected Total</span>
-            <span className="font-serif font-bold text-sm sm:text-base text-ledger-ink tabular-nums block mt-0.5">
-              {pace?.projected_total_formatted || "Calculating..."}
+            <span className="font-serif font-bold text-lg text-slate-900 dark:text-slate-100 tabular-nums block mt-1">
+              {pace?.projected_total_formatted || formatINR(Math.round((totalSpent / Math.max(1, elapsedDays)) * totalDays))}
+            </span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+              At current daily velocity
             </span>
           </div>
         </div>
-
-        {/* Deterministic Verdict Callout */}
-        {pace?.verdict_sentence && (
-          <div className="p-3 rounded-md bg-ledger-surfaceSubtle/90 border-l-4 border-ledger-teal flex items-start gap-2.5 text-xs text-ledger-ink">
-            <div className="w-5 h-5 rounded-full bg-ledger-tealLight text-ledger-teal flex items-center justify-center shrink-0 mt-0.5">
-              <Check className="w-3 h-3" />
-            </div>
-            <div className="space-y-0.5 min-w-0">
-              <span className="font-semibold text-ledger-ink block text-[11px] uppercase tracking-wider font-mono">
-                Pacing Verdict (Deterministic Fact)
-              </span>
-              <p className="text-ledger-inkMuted leading-relaxed">{pace.verdict_sentence}</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 4. Category Budget Cards Section */}
-      <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
+      <div className="glass-panel p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden rounded-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-ledger-borderSubtle pb-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
-                Granular Limits
-              </span>
-            </div>
             <h3 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
               Category Allocation Ceilings
             </h3>
@@ -506,7 +466,7 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
                   onClick={() => setFilterMode(tab.id)}
                   className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
                     isActive
-                      ? "bg-ledger-ink text-white shadow-hairline"
+                      ? "bg-slate-900 text-white dark:bg-ledger-surfaceElevated dark:text-ledger-teal dark:border dark:border-ledger-border shadow-hairline font-semibold"
                       : "text-ledger-inkMuted hover:text-ledger-ink hover:bg-ledger-surface"
                   } focus-ring`}
                 >
@@ -519,9 +479,7 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
 
         {/* Category Grid */}
         {isLoading ? (
-          <div className="p-10 text-center text-xs text-ledger-inkMuted animate-pulse">
-            Loading monthly category budgets...
-          </div>
+          <BudgetManagementSkeleton />
         ) : filteredCategories.length === 0 ? (
           <div className="p-10 text-center space-y-2">
             <Shield className="w-8 h-8 text-ledger-inkSubtle mx-auto" />
@@ -541,7 +499,6 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
             {filteredCategories.map((cat) => {
               const hasBudget = cat.limit_paise > 0;
               const statusBadge = getPaceStatusBadge(cat.status);
-              const IconComponent = CATEGORY_ICONS[cat.icon] || Tag;
               const isOver = cat.status === "over_budget";
 
               return (
@@ -553,9 +510,7 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-md bg-ledger-surfaceSubtle text-ledger-teal flex items-center justify-center border border-ledger-border shrink-0">
-                          <IconComponent className="w-4 h-4" />
-                        </div>
+                        <CategoryGlassIcon iconName={cat.icon || cat.category_name} size="sm" />
                         <div className="min-w-0">
                           <span className="font-semibold text-sm text-ledger-ink block truncate">
                             {cat.category_name}
@@ -567,9 +522,10 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
                       </div>
 
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border shrink-0 ${statusBadge.className}`}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-sans font-medium border shrink-0 shadow-xs ${statusBadge.className}`}
                       >
-                        {statusBadge.label}
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dotColor} shrink-0`} />
+                        <span>{statusBadge.label}</span>
                       </span>
                     </div>
 
@@ -629,14 +585,14 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
                     )}
                   </div>
 
-                  {/* Card Action Button (Accessible >= 44px Touch Target) */}
+                  {/* Card Action Button (Accessible >= 44px Touch Target, Tactile Quiet Ledger styling) */}
                   <div className="pt-3 mt-3 border-t border-ledger-borderSubtle">
                     <button
                       onClick={() => handleStartEdit(cat)}
                       aria-label={`Edit ${cat.category_name} budget`}
-                      className="btn-secondary w-full text-xs min-h-[44px] flex items-center justify-center gap-1.5 focus-ring"
+                      className="w-full text-xs min-h-[40px] rounded-xl flex items-center justify-center gap-2 font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700/90 text-slate-900 dark:text-slate-100 border border-slate-300/90 dark:border-slate-600/80 shadow-xs transition-all active:scale-[0.99] cursor-pointer focus-ring"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      <Edit2 className="w-3.5 h-3.5 text-ledger-teal shrink-0" />
                       <span>{hasBudget ? "Adjust Budget Limit" : "Set Budget Ceiling"}</span>
                     </button>
                   </div>
@@ -649,7 +605,7 @@ export const BudgetManagement: React.FC<BudgetManagementProps> = ({
 
       {/* 5. Accessible Category Budget Edit Modal */}
       {editingCat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ledger-ink/40 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in">
           <div className="card-base p-5 sm:p-6 shadow-modal max-w-md w-full rounded-lg space-y-4">
             <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3">
               <div>

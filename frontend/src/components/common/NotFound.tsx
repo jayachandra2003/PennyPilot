@@ -1,4 +1,5 @@
-import { ArrowLeft, Compass } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { PennyPilotLogo } from "./PennyPilotLogo";
 
 interface NotFoundProps {
   onBackToHome: () => void;
@@ -8,8 +9,8 @@ export const NotFound: React.FC<NotFoundProps> = ({ onBackToHome }) => {
   return (
     <div className="flex-1 flex items-center justify-center px-4 py-16">
       <div className="max-w-md w-full text-center bg-ledger-surface p-8 rounded-2xl border border-ledger-border shadow-card">
-        <div className="w-14 h-14 rounded-2xl bg-ledger-tealLight text-ledger-teal flex items-center justify-center mx-auto mb-4">
-          <Compass className="w-8 h-8" />
+        <div className="flex items-center justify-center mx-auto mb-4">
+          <PennyPilotLogo variant="symbol" size="lg" />
         </div>
         <h1 className="font-serif text-3xl font-bold text-ledger-ink mb-2">404 — Ledger Entry Missing</h1>
         <p className="text-sm text-ledger-inkMuted mb-6 leading-relaxed">

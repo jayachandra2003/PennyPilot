@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowRight, Plus, Sparkles, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import type { TransactionItem } from "../../lib/api";
 import { formatINR } from "../../lib/currency";
+import { CategoryGlassIcon } from "../common/GlassIcon";
 
 interface RecentTransactionsCardProps {
   transactions: TransactionItem[];
@@ -15,13 +16,10 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
   onQuickAdd,
 }) => {
   return (
-    <div className="bg-ledger-surface border border-ledger-border rounded-lg shadow-card p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden">
+    <div className="glass-panel p-4 sm:p-5 md:p-6 space-y-4 min-w-0 overflow-hidden rounded-2xl h-full flex flex-col justify-between">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3 sm:pb-4">
         <div>
-          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-ledger-inkSubtle font-semibold">
-            Audit Trail
-          </span>
           <h2 className="font-serif text-lg sm:text-xl font-bold text-ledger-ink">
             Recent Transactions
           </h2>
@@ -29,7 +27,7 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onQuickAdd}
-            className="btn-secondary text-xs px-2.5 py-1 min-h-[32px] hidden sm:inline-flex items-center gap-1 focus-ring"
+            className="btn-secondary text-xs px-3 py-1.5 min-h-[34px] hidden sm:inline-flex items-center gap-1 focus-ring"
             title="Add transaction"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -37,7 +35,7 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
           </button>
           <button
             onClick={onViewAll}
-            className="text-xs text-ledger-teal hover:text-ledger-tealHover font-medium flex items-center gap-1 focus-ring py-1 px-2 rounded hover:bg-ledger-surfaceSubtle transition-colors"
+            className="text-xs text-ledger-teal hover:text-ledger-tealHover font-medium flex items-center gap-1 focus-ring py-1 px-2.5 rounded-lg hover:bg-ledger-surfaceSubtle transition-colors"
           >
             <span>View All Ledger</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -46,7 +44,7 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
       </div>
 
       {transactions.length === 0 ? (
-        <div className="text-center py-10 space-y-3 bg-ledger-surfaceSubtle/50 rounded border border-dashed border-ledger-border">
+        <div className="text-center py-10 space-y-3 bg-ledger-surfaceSubtle/50 rounded-lg border border-dashed border-ledger-border">
           <p className="text-xs text-ledger-inkMuted">No financial transactions recorded yet.</p>
           <button
             onClick={onQuickAdd}
@@ -65,19 +63,7 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
               return (
                 <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 min-w-0">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={`w-7 h-7 rounded flex items-center justify-center shrink-0 text-xs font-semibold ${
-                        isExpense
-                          ? "bg-ledger-surfaceSubtle text-ledger-inkMuted border border-ledger-borderSubtle"
-                          : "bg-ledger-sageLight text-ledger-sage border border-ledger-sage/20"
-                      }`}
-                    >
-                      {isExpense ? (
-                        <ArrowDownRight className="w-3.5 h-3.5" />
-                      ) : (
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      )}
-                    </div>
+                    <CategoryGlassIcon iconName={t.category_name} size="xs" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-ledger-ink text-xs truncate">
@@ -93,15 +79,15 @@ export const RecentTransactionsCard: React.FC<RecentTransactionsCardProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[10px] text-ledger-inkSubtle">
+                      <div className="flex items-center gap-1.5 text-[10px] text-ledger-inkSubtle font-mono">
                         <span className="truncate">{t.category_name || "General"}</span>
                         <span>•</span>
-                        <span className="font-mono">{t.occurred_on}</span>
+                        <span>{t.occurred_on}</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right font-serif font-bold text-xs tabular-nums whitespace-nowrap shrink-0">
-                    <span className={isExpense ? "text-ledger-ink" : "text-ledger-sage font-bold"}>
+                    <span className={isExpense ? "text-ledger-ink" : "text-emerald-700 font-bold"}>
                       {isExpense ? `-${formatINR(t.amount_paise)}` : `+${formatINR(t.amount_paise)}`}
                     </span>
                   </div>

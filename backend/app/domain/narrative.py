@@ -108,6 +108,8 @@ class MonthlyNarrativeReportGenerator:
             "top_category_share": f"{top_cat['percentage']}%" if top_cat else "0%",
             "anomaly_count": len(anomalies),
             "mom_expense_change": f"{mom['expense_delta_formatted']} ({mom['expense_pct_change']}%)",
+            "categories": categories,
+            "budget_pace": pace,
         }
 
         # 4. Significant Category Shifts

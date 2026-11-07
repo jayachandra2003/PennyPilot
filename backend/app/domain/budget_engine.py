@@ -65,7 +65,14 @@ def calculate_budget_pace(
     projected_overrun_paise = projected_total_paise - limit_paise
 
     # Determine status
-    if spent_paise > limit_paise:
+    if limit_paise == 0:
+        if spent_paise == 0:
+            status = "on_track"
+            verdict = "No category budgets configured for this month. Set up budgets to track spending pace."
+        else:
+            status = "caution"
+            verdict = f"No budget ceiling set. {format_inr(spent_paise)} spent across categories."
+    elif spent_paise > limit_paise:
         status = "over_budget"
         verdict = f"Budget exceeded by {format_inr(spent_paise - limit_paise)}."
     elif projected_total_paise > limit_paise:
@@ -76,8 +83,11 @@ def calculate_budget_pace(
         verdict = f"Spending slightly faster than scheduled ({format_inr(spent_paise)} vs target {format_inr(target_pace_paise)})."
     else:
         status = "on_track"
-        projected_savings = max(0, limit_paise - projected_total_paise)
-        verdict = f"On track. Projected to save {format_inr(projected_savings)} by month-end."
+        if spent_paise == 0:
+            verdict = f"On track. Full budget ceiling of {format_inr(limit_paise)} remains available."
+        else:
+            projected_buffer = max(0, limit_paise - projected_total_paise)
+            verdict = f"On track. Projected to stay {format_inr(projected_buffer)} under budget ceiling by month-end."
 
     utilization = calculate_budget_utilization(spent_paise, limit_paise)
 

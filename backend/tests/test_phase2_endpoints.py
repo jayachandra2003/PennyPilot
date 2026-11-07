@@ -2,10 +2,14 @@
 import uuid
 from datetime import date
 from fastapi.testclient import TestClient
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.core.security import create_access_token
 from app.db.base import Base
-from app.db.session import SessionLocal, engine
+from app.db.session import SessionLocal, get_db
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.user import User
@@ -13,8 +17,33 @@ from app.models.user import User
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def isolated_db():
+    """Ensure complete isolation: tests execute entirely in an in-memory SQLite database."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestingSession
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+
+
 def _setup_test_user():
-    db = SessionLocal()
+    override = app.dependency_overrides.get(get_db)
+    db = next(override()) if override else SessionLocal()
     u = db.query(User).filter(User.email == "p2_test@pennypilot.in").first()
     if not u:
         u = User(
