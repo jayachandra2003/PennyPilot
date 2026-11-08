@@ -804,6 +804,8 @@ def test_production_url_and_cookie_security_sync():
     from app.core.config import Settings
     prod_settings = Settings(
         ENVIRONMENT="production",
+        DATABASE_URL="postgresql://test:test@localhost:5432/pennypilot_test",
+        SECRET_KEY="a" * 64,
         BACKEND_BASE_URL="https://api.pennypilot.in",
         FRONTEND_BASE_URL="https://pennypilot.in",
         ALLOWED_ORIGINS="https://pennypilot.in,https://app.pennypilot.in",

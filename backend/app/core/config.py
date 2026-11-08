@@ -224,6 +224,24 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production" or is_https or (self.COOKIE_SAMESITE and self.COOKIE_SAMESITE.lower() == "none"):
             self.COOKIE_SECURE = True
 
+        # Production security validation
+        if self.ENVIRONMENT.strip().lower() == 'production':
+            if not self.DATABASE_URL.startswith('postgresql://'):
+                raise ValueError(
+                    'Production requires a PostgreSQL DATABASE_URL. '
+                    'SQLite is not supported in production.'
+                )
+
+            if (
+                not self.SECRET_KEY
+                or len(self.SECRET_KEY) < 64
+                or self.SECRET_KEY == 'dev-secret-key-change-in-production-min-32-chars-required'
+            ):
+                raise ValueError(
+                    'Production requires a secure SECRET_KEY '
+                    'of at least 64 characters.'
+                )
+
         return self
 
     # AI Configuration (3-Tier Fallback Chain)
