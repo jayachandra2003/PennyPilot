@@ -15,6 +15,8 @@ class ReceiptExtractResponse(BaseModel):
     mime_type: str
     merchant: Optional[str] = None
     amount_paise: Optional[int] = None
+    subtotal_paise: Optional[int] = None
+    round_off_paise: Optional[int] = None
     date: Optional[str] = None  # YYYY-MM-DD
     tax_paise: Optional[int] = None
     line_items: List[ReceiptLineItem] = Field(default_factory=list)

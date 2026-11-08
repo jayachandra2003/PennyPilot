@@ -1,7 +1,7 @@
 """Application configuration using Pydantic Settings."""
 import re
 from pathlib import Path
-from typing import List, Union
+from typing import Any, List, Optional, Union
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -95,13 +95,74 @@ class Settings(BaseSettings):
     FRONTEND_BASE_URL: str = "http://localhost:5173"
     FRONTEND_URL: str = "http://localhost:5173"
     BACKEND_BASE_URL: str = "http://localhost:8000"
+    PUBLIC_BASE_URL: str = ""
+
+    def resolve_base_url(self, request: Optional[Any] = None) -> str:
+        """
+        Safely determine the public application origin (scheme + host).
+        1. Explicit settings.PUBLIC_BASE_URL (if configured).
+        2. Verified incoming request (checking x-forwarded-host, origin, or host against an allowlist).
+        3. Fallback to settings.FRONTEND_BASE_URL (http://localhost:5173).
+        """
+        if self.PUBLIC_BASE_URL and self.PUBLIC_BASE_URL.strip():
+            return self.PUBLIC_BASE_URL.strip().rstrip("/")
+
+        if request is not None:
+            # Check Origin header (sent by browsers on POST)
+            origin = request.headers.get("origin")
+            if origin:
+                origin_clean = origin.strip().rstrip("/")
+                if not origin_clean.endswith(":8000") and self.is_origin_allowed(origin_clean):
+                    return origin_clean
+
+            # Check X-Forwarded-Host or Host
+            f_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+            if f_host:
+                f_host = f_host.strip().split(",")[0].strip()
+                # If request host is the backend's direct port (:8000), target must be the frontend URL
+                if f_host.endswith(":8000"):
+                    return self.FRONTEND_BASE_URL.rstrip("/")
+                f_proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+                if "trycloudflare.com" in f_host.lower():
+                    f_proto = "https"
+                candidate = f"{f_proto}://{f_host}".rstrip("/")
+                if self.is_origin_allowed(candidate):
+                    return candidate
+
+        return self.FRONTEND_BASE_URL.rstrip("/")
+
+    def is_origin_allowed(self, url_or_host: str) -> bool:
+        """Check if origin/host is authorized (localhost, 127.0.0.1, trycloudflare.com, or ALLOWED_ORIGINS)."""
+        clean = url_or_host.lower().replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+        if clean in ("localhost", "127.0.0.1"):
+            return True
+        if clean.endswith(".trycloudflare.com"):
+            return True
+        for o in (self.ALLOWED_ORIGINS if isinstance(self.ALLOWED_ORIGINS, list) else []):
+            o_clean = o.lower().replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+            if clean == o_clean:
+                return True
+        return False
+
+    def is_https_request(self, request: Optional[Any] = None) -> bool:
+        """Whether current request was received via HTTPS."""
+        if self.COOKIE_SECURE or self.ENVIRONMENT == "production":
+            return True
+        if request is not None:
+            proto = request.headers.get("x-forwarded-proto", "").lower()
+            if proto == "https" or request.url.scheme == "https":
+                return True
+            host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").lower()
+            if "trycloudflare.com" in host:
+                return True
+        return False
 
     # Brevo SMTP Relay Configuration
     SMTP_HOST: str = "smtp-relay.brevo.com"
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "jayachandravennam.jc@gmail.com"
+    SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = "PennyPilot"
     SMTP_USE_TLS: bool = True
     EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 30
@@ -167,15 +228,37 @@ class Settings(BaseSettings):
 
     # AI Configuration (3-Tier Fallback Chain)
     GEMINI_API_KEY: str = ""
+    GEMINI_VISION_MODEL: str = "gemini-3.8-flash"
+    GEMINI_TEXT_MODEL: str = "gemini-3.8-flash"
     GROQ_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5:3b"
 
-    # Profile & Receipt Storage
+    # Storage Configuration (Local vs Cloudflare R2)
+    STORAGE_BACKEND: str = "local"
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "pennypilot-storage"
+    R2_ENDPOINT_URL: str = ""
+    R2_PUBLIC_URL: str = ""
+
+    # Profile & Receipt Storage (Local Path Fallback)
     AVATAR_UPLOAD_DIR: Path = PROJECT_ROOT / "uploads" / "avatars"
     RECEIPT_UPLOAD_DIR: Path = PROJECT_ROOT / "uploads" / "receipts"
 
 
 settings = Settings()
-settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-settings.RECEIPT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    settings.RECEIPT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    # On read-only serverless environments (e.g. Vercel Lambda), fallback to /tmp
+    tmp_uploads = Path("/tmp/uploads")
+    settings.AVATAR_UPLOAD_DIR = tmp_uploads / "avatars"
+    settings.RECEIPT_UPLOAD_DIR = tmp_uploads / "receipts"
+    try:
+        settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        settings.RECEIPT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass

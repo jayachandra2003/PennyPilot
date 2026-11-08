@@ -73,6 +73,8 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
     notes: string;
     confidence_score: number;
     warnings: string[];
+    subtotal_paise?: number | null;
+    tax_paise?: number | null;
     line_items: Array<{ name: string; amount_paise: number }>;
   } | null>(null);
   const [showLineItems, setShowLineItems] = useState(false);
@@ -195,6 +197,8 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
         notes: data.notes || `Receipt scan: ${data.file_name}`,
         confidence_score: data.confidence_score,
         warnings: data.warnings,
+        subtotal_paise: data.subtotal_paise,
+        tax_paise: data.tax_paise,
         line_items: data.line_items || [],
       });
 
@@ -384,8 +388,8 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-[#121C28] backdrop-blur-2xl max-w-2xl w-full rounded-3xl border border-ledger-border shadow-float overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in overflow-hidden">
+      <div className="bg-white dark:bg-[#121C28] backdrop-blur-2xl max-w-2xl w-full rounded-2xl sm:rounded-3xl border border-ledger-border shadow-float overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[92vh]">
         {/* Hidden File Inputs */}
         <input
           type="file"
@@ -464,7 +468,7 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 sm:space-y-5 flex-1">
           {/* Extracting Loading Overlay */}
           {isExtracting && (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
@@ -560,24 +564,24 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
           {!isExtracting && mode === "receipt_review" && receiptDraft && (
             <form onSubmit={handleReceiptReviewSubmit} className="space-y-4">
               {/* Receipt File Metadata Card */}
-              <div className="p-3.5 rounded-2xl bg-ledger-surface border border-ledger-border flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-ledger-teal/10 text-ledger-teal flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5" />
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-ledger-surface border border-ledger-border flex items-center justify-between gap-2 overflow-hidden">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-ledger-teal/10 text-ledger-teal flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-ledger-ink truncate max-w-[240px] sm:max-w-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-ledger-ink truncate" title={receiptDraft.file_name}>
                       {receiptDraft.file_name}
                     </p>
-                    <p className="text-[11px] text-ledger-inkMuted">
+                    <p className="text-[11px] text-ledger-inkMuted truncate">
                       {(receiptDraft.file_size / 1024).toFixed(1)} KB • Attached
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                    <CheckCircle2 className="w-3 h-3" />
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                    <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
                     <span>{Math.round(receiptDraft.confidence_score * 100)}% Match</span>
                   </span>
                   <button
@@ -586,7 +590,7 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
                       setReceiptDraft(null);
                       setMode("nl");
                     }}
-                    className="text-xs text-ledger-inkMuted hover:text-ledger-red transition-colors"
+                    className="text-xs text-ledger-inkMuted hover:text-ledger-red transition-colors px-1 py-1"
                     title="Remove attachment"
                   >
                     Replace
@@ -694,6 +698,19 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
                 />
               </div>
 
+              {/* Detected Subtotal & Tax Breakdowns (if available) */}
+              {(receiptDraft.subtotal_paise || receiptDraft.tax_paise) && (
+                <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-ledger-inkSubtle bg-ledger-surfaceSubtle/50 border border-ledger-border/50 rounded-xl p-2.5">
+                  {receiptDraft.subtotal_paise && (
+                    <span>Subtotal: <strong className="text-ledger-ink font-semibold">{formatINR(receiptDraft.subtotal_paise)}</strong></span>
+                  )}
+                  {receiptDraft.subtotal_paise && receiptDraft.tax_paise && <span>•</span>}
+                  {receiptDraft.tax_paise && (
+                    <span>Taxes (GST): <strong className="text-ledger-ink font-semibold">{formatINR(receiptDraft.tax_paise)}</strong></span>
+                  )}
+                </div>
+              )}
+
               {/* Detected Line Items (Optional Collapsible) */}
               {receiptDraft.line_items.length > 0 && (
                 <div className="border border-ledger-border rounded-xl p-3 bg-ledger-surfaceSubtle space-y-2">
@@ -720,23 +737,23 @@ export const NLQuickAddModal: React.FC<NLQuickAddModalProps> = ({ isOpen, onClos
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-3 border-t border-ledger-border">
+              <div className="flex items-center justify-between pt-3 border-t border-ledger-border gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setReceiptDraft(null);
                     setMode("nl");
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-ledger-inkMuted hover:text-ledger-ink border border-ledger-border"
+                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-ledger-inkMuted hover:text-ledger-ink border border-ledger-border min-h-[44px]"
                 >
                   Discard
                 </button>
                 <button
                   type="submit"
                   disabled={saveTransactionMutation.isPending}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-ledger-teal text-white text-xs font-semibold hover:bg-ledger-tealHover disabled:opacity-50 transition-colors shadow-sm focus-ring"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-ledger-teal text-white text-xs font-semibold hover:bg-ledger-tealHover disabled:opacity-50 transition-colors shadow-sm focus-ring min-h-[44px]"
                 >
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4 flex-shrink-0" />
                   <span>
                     {saveTransactionMutation.isPending ? "Recording..." : "Save Transaction to Ledger"}
                   </span>

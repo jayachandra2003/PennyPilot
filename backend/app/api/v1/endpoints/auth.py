@@ -33,6 +33,7 @@ from app.schemas.user import (
     VerifyEmailRequest,
 )
 from app.services.email_service import is_smtp_configured, send_verification_email
+from app.services.storage import avatar_storage_key, get_storage_provider
 from app.services.google_oauth import (
     OAuthValidationError,
     build_google_authorization_url,
@@ -175,7 +176,8 @@ def register_user(
     try:
         _, raw_token = create_verification_token(db, new_user.id)
         if raw_token:
-            verification_url = f"{settings.FRONTEND_URL}/verify-email?token={raw_token}"
+            base_url = settings.resolve_base_url(request)
+            verification_url = f"{base_url}/verify-email?token={raw_token}"
             email_dispatched = send_verification_email(new_user.email, new_user.display_name, verification_url)
     except Exception as e:
         logger.error(f"Error during verification email dispatch: {type(e).__name__}")
@@ -215,13 +217,22 @@ def login_user(
     normalized_email = login_data.email.strip().lower()
     user = db.query(User).filter(User.email == normalized_email).first()
 
-    if not user or not user.password_hash or not verify_password(login_data.password, user.password_hash):
+    if not user:
+        raise UnauthorizedException(message="Invalid email or password", code="INVALID_CREDENTIALS")
+
+    if not user.password_hash or len(user.password_hash) == 0:
+        raise UnauthorizedException(
+            message="This account was registered using Google Sign-In. Please sign in with 'Continue with Google', or use 'Forgot Password' to set a password.",
+            code="OAUTH_ACCOUNT_NO_PASSWORD",
+        )
+
+    if not verify_password(login_data.password, user.password_hash):
         raise UnauthorizedException(message="Invalid email or password", code="INVALID_CREDENTIALS")
 
     if not user.is_active:
         raise UnauthorizedException(message="Account is deactivated", code="ACCOUNT_DEACTIVATED")
 
-    # Enforce email verification (Google users & demo user remain eligible)
+    # Enforce email verification (Google OAuth accounts are auto-verified)
     if not user.email_verified:
         raise ForbiddenException(
             message="Please verify your email address before signing in. Check your inbox for the verification link.",
@@ -236,7 +247,7 @@ def login_user(
     try:
         _, raw_session_token = create_session(db, user_id, request)
         if raw_session_token:
-            set_session_cookies(response, raw_session_token)
+            set_session_cookies(response, raw_session_token, request=request)
     except Exception:
         pass
 
@@ -286,26 +297,30 @@ def verify_email_endpoint(
 
 @router.get("/verify-email")
 def verify_email_link_click(
+    request: Request,
     token: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
 ):
     """Convenience handler for clicking verification links in email clients. Redirects to frontend."""
+    base_url = settings.resolve_base_url(request)
     success, status_code, user = verify_email_token(db, token)
     if success:
-        return RedirectResponse(f"{settings.FRONTEND_URL}/verify-email?status=success", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(f"{base_url}/verify-email?status=success", status_code=status.HTTP_302_FOUND)
     elif status_code == "TOKEN_EXPIRED":
-        return RedirectResponse(f"{settings.FRONTEND_URL}/verify-email?status=expired", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(f"{base_url}/verify-email?status=expired", status_code=status.HTTP_302_FOUND)
     else:
-        return RedirectResponse(f"{settings.FRONTEND_URL}/verify-email?status=invalid", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(f"{base_url}/verify-email?status=invalid", status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/resend-verification", response_model=StatusResponse)
 def resend_verification_endpoint(
     payload: ResendVerificationRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Resend email verification link with rate limiting (60s cooldown)."""
-    success, status_code, retry_after = resend_verification_email(db, payload.email)
+    base_url = settings.resolve_base_url(request)
+    success, status_code, retry_after = resend_verification_email(db, payload.email, base_url=base_url)
     if not success:
         if status_code == "RATE_LIMITED":
             raise AppException(
@@ -336,10 +351,12 @@ def resend_verification_endpoint(
 @router.post("/forgot-password", response_model=StatusResponse)
 def forgot_password_endpoint(
     payload: ForgotPasswordRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Initiate password reset. Strictly enumeration-safe generic response."""
-    success, status_code, retry_after = request_password_reset(db, payload.email)
+    base_url = settings.resolve_base_url(request)
+    success, status_code, retry_after = request_password_reset(db, payload.email, base_url=base_url)
     if not success and status_code == "RATE_LIMITED":
         raise AppException(
             message=f"Please wait {retry_after} seconds before requesting another password reset.",
@@ -404,9 +421,10 @@ def initiate_google_login(
     Stores single-use OAuthTransaction in database and sets bound HttpOnly transaction cookie.
     Redirects browser to Google's consent screen.
     """
+    base_url = settings.resolve_base_url(request)
     if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
         return RedirectResponse(
-            f"{settings.FRONTEND_BASE_URL}/login?error=oauth_not_configured",
+            f"{base_url}/login?error=oauth_not_configured",
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -423,7 +441,7 @@ def initiate_google_login(
                 initiating_session_id = session_rec.id
         except HTTPException:
             return RedirectResponse(
-                f"{settings.FRONTEND_BASE_URL}/login?error=authentication_required_to_link",
+                f"{base_url}/login?error=authentication_required_to_link",
                 status_code=status.HTTP_302_FOUND,
             )
 
@@ -438,18 +456,19 @@ def initiate_google_login(
     except OperationalError as e:
         logger.error(f"Failed to create OAuth transaction: {e}")
         return RedirectResponse(
-            f"{settings.FRONTEND_BASE_URL}/login?error=oauth_configuration_error",
+            f"{base_url}/login?error=oauth_configuration_error",
             status_code=status.HTTP_302_FOUND,
         )
 
+    is_secure = settings.is_https_request(request)
     response = RedirectResponse(url=auth_url, status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key=settings.OAUTH_TXN_COOKIE_NAME,
         value=cookie_value,
         httponly=True,
         samesite="lax",
-        secure=settings.COOKIE_SECURE,
-        path="/api/v1/auth/google",
+        secure=is_secure,
+        path="/",
         max_age=300,
         domain=settings.COOKIE_DOMAIN,
     )
@@ -480,14 +499,15 @@ def initiate_google_linking(
         initiating_session_id=initiating_session_id,
         request=request,
     )
+    is_secure = settings.is_https_request(request)
     response = Response(content='{"authorization_url": "' + auth_url + '"}', media_type="application/json")
     response.set_cookie(
         key=settings.OAUTH_TXN_COOKIE_NAME,
         value=cookie_value,
         httponly=True,
         samesite="lax",
-        secure=settings.COOKIE_SECURE,
-        path="/api/v1/auth/google",
+        secure=is_secure,
+        path="/",
         max_age=300,
         domain=settings.COOKIE_DOMAIN,
     )
@@ -512,28 +532,29 @@ async def google_oauth_callback(
     6. Non-destructive identity resolution (never auto-merge without linking).
     7. Session establishment with HttpOnly cookies and CSRF token.
     """
+    public_base = settings.resolve_base_url(request)
     cookie_val = request.cookies.get(settings.OAUTH_TXN_COOKIE_NAME)
 
     # 1. User cancelled or Google returned an error
     if error:
         logger.info(f"Google OAuth cancelled by user: {error}")
-        return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error=oauth_cancelled")
+        return make_oauth_redirect_with_cleanup(f"{public_base}/login?error=oauth_cancelled", request=request)
 
     if not code or not state:
-        return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error=invalid_callback_params")
+        return make_oauth_redirect_with_cleanup(f"{public_base}/login?error=invalid_callback_params", request=request)
 
     # 2. Atomic single-use consumption & cookie binding validation
     try:
         txn = validate_and_consume_oauth_transaction(db, state, cookie_val)
     except OAuthValidationError as e:
         logger.warning(f"OAuth transaction validation failed: {e.error_code}")
-        return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error={e.error_code}")
+        return make_oauth_redirect_with_cleanup(f"{public_base}/login?error={e.error_code}", request=request)
 
     # 3. Exchange code for tokens via Google token endpoint
     try:
-        tokens = await exchange_google_code_for_tokens(code, txn.code_verifier)
+        tokens = await exchange_google_code_for_tokens(code, txn.code_verifier, redirect_uri=txn.redirect_uri)
     except OAuthValidationError as e:
-        return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error={e.error_code}")
+        return make_oauth_redirect_with_cleanup(f"{public_base}/login?error={e.error_code}", request=request)
 
     # 4. Verify ID Token using Google's public JWKS & assert nonce
     try:
@@ -543,7 +564,7 @@ async def google_oauth_callback(
             access_token=tokens.get("access_token"),
         )
     except OAuthValidationError as e:
-        return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error={e.error_code}")
+        return make_oauth_redirect_with_cleanup(f"{public_base}/login?error={e.error_code}", request=request)
 
     sub = str(claims["sub"])
     email = str(claims["email"]).strip().lower()
@@ -552,18 +573,18 @@ async def google_oauth_callback(
     # 5. Handle Linking Flow
     if txn.purpose == "link":
         if not txn.user_id:
-            return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/settings?error=linking_user_missing")
+            return make_oauth_redirect_with_cleanup(f"{public_base}/settings?error=linking_user_missing", request=request)
 
         # Session continuity check: verify initiating session is still active
         if txn.initiating_session_id:
             init_sess = db.query(UserSession).filter(UserSession.id == txn.initiating_session_id).first()
             if not init_sess or init_sess.user_id != txn.user_id:
-                return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/settings?error=linking_session_invalidated")
+                return make_oauth_redirect_with_cleanup(f"{public_base}/settings?error=linking_session_invalidated", request=request)
 
         # Verify Google sub is not already linked to another account
         existing_link = db.query(OAuthAccount).filter(OAuthAccount.provider == "google", OAuthAccount.provider_user_id == sub).first()
         if existing_link and existing_link.user_id != txn.user_id:
-            return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/settings?error=identity_already_linked")
+            return make_oauth_redirect_with_cleanup(f"{public_base}/settings?error=identity_already_linked", request=request)
 
         if not existing_link:
             new_link = OAuthAccount(
@@ -579,8 +600,8 @@ async def google_oauth_callback(
         raw_sess_cookie = request.cookies.get(settings.SESSION_COOKIE_NAME)
         _, new_raw_token = rotate_session(db, raw_sess_cookie, txn.user_id, request)
 
-        response = make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/settings?status=google_linked")
-        set_session_cookies(response, new_raw_token)
+        response = make_oauth_redirect_with_cleanup(f"{public_base}/settings?status=google_linked", request=request)
+        set_session_cookies(response, new_raw_token, request=request)
         return response
 
     # 6. Handle Login / Registration Flow
@@ -591,7 +612,7 @@ async def google_oauth_callback(
         # Existing linked account -> Sign In directly
         user = db.query(User).filter(User.id == linked_account.user_id, User.is_active == True).first()
         if not user:
-            return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error=account_deactivated")
+            return make_oauth_redirect_with_cleanup(f"{public_base}/login?error=account_deactivated", request=request)
     else:
         # Google sub is not yet linked. Check if an account with this email exists.
         existing_user = db.query(User).filter(User.email == email).first()
@@ -599,7 +620,7 @@ async def google_oauth_callback(
             # STRICT ZERO-SILENT-MERGE INVARIANT:
             # An account exists with this email address, but is not linked to Google.
             # Refuse automatic merge to protect financial ledger privacy and security.
-            return make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/login?error=account_exists_link_required")
+            return make_oauth_redirect_with_cleanup(f"{public_base}/login?error=account_exists_link_required", request=request)
 
         # Create new Google-verified user
         user = User(
@@ -627,8 +648,8 @@ async def google_oauth_callback(
 
     # Issue server-side session and cookies
     session_rec, raw_session_token = create_session(db, user.id, request)
-    response = make_oauth_redirect_with_cleanup(f"{settings.FRONTEND_BASE_URL}/?auth=success")
-    set_session_cookies(response, raw_session_token)
+    response = make_oauth_redirect_with_cleanup(f"{public_base}/?auth=success", request=request)
+    set_session_cookies(response, raw_session_token, request=request)
     return response
 
 
@@ -772,8 +793,11 @@ async def upload_user_avatar(
 
     ext, _ = validate_image_bytes(content)
 
+    storage = get_storage_provider()
+
     if current_user.avatar_url:
         old_filename = Path(current_user.avatar_url).name
+        storage.delete_file(avatar_storage_key(current_user.id, old_filename))
         old_file = settings.AVATAR_UPLOAD_DIR / old_filename
         if old_file.is_file():
             try:
@@ -782,9 +806,17 @@ async def upload_user_avatar(
                 pass
 
     safe_filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
-    target_path = settings.AVATAR_UPLOAD_DIR / safe_filename
-    with open(target_path, "wb") as f:
-        f.write(content)
+    media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else ("image/png" if ext == ".png" else "image/webp")
+    storage.save_file(avatar_storage_key(current_user.id, safe_filename), content, media_type)
+
+    # Optional local fallback
+    try:
+        settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        target_path = settings.AVATAR_UPLOAD_DIR / safe_filename
+        with open(target_path, "wb") as f:
+            f.write(content)
+    except Exception:
+        pass
 
     current_user.avatar_url = safe_filename
     current_user.updated_at = datetime.now(timezone.utc)
@@ -805,17 +837,29 @@ def get_my_avatar(
         raise NotFoundException(message="User has not set a profile picture", code="AVATAR_NOT_SET")
 
     filename = Path(current_user.avatar_url).name
-    target_path = settings.AVATAR_UPLOAD_DIR / filename
-    if not target_path.is_file():
-        raise NotFoundException(message="Avatar file not found on disk", code="AVATAR_NOT_FOUND")
+    storage = get_storage_provider()
+    key = avatar_storage_key(current_user.id, filename)
+    file_res = storage.get_file(key)
+    if file_res is not None:
+        data, media_type = file_res
+        return Response(
+            content=data,
+            media_type=media_type,
+            headers={"Cache-Control": "private, max-age=3600"},
+        )
 
-    ext = target_path.suffix.lower()
-    media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else ("image/png" if ext == ".png" else "image/webp")
-    return FileResponse(
-        path=target_path,
-        media_type=media_type,
-        headers={"Cache-Control": "private, max-age=3600"},
-    )
+    # Local fallback
+    target_path = settings.AVATAR_UPLOAD_DIR / filename
+    if target_path.is_file():
+        ext = target_path.suffix.lower()
+        media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else ("image/png" if ext == ".png" else "image/webp")
+        return FileResponse(
+            path=target_path,
+            media_type=media_type,
+            headers={"Cache-Control": "private, max-age=3600"},
+        )
+
+    raise NotFoundException(message="Avatar file not found on disk", code="AVATAR_NOT_FOUND")
 
 
 @router.get("/users/{user_id}/avatar")
@@ -838,9 +882,12 @@ def delete_user_avatar(
     current_user: User = Depends(get_current_user),
     _csrf: bool = Depends(verify_csrf),
 ):
-    """Remove user's profile picture and delete image file from local storage."""
+    """Remove user's profile picture and delete image file from persistent storage."""
     if current_user.avatar_url:
         filename = Path(current_user.avatar_url).name
+        storage = get_storage_provider()
+        storage.delete_file(avatar_storage_key(current_user.id, filename))
+
         target_path = settings.AVATAR_UPLOAD_DIR / filename
         if target_path.is_file():
             try:

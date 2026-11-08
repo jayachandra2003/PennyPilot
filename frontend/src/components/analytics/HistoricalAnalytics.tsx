@@ -15,6 +15,7 @@ import {
   FileText,
   FileType,
   ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 import type { HistoricalAnalyticsResponse, HistoricalMonthSummary } from "../../lib/api";
 import { fetchHistoricalAnalytics } from "../../lib/api";
@@ -46,6 +47,7 @@ export const HistoricalAnalytics: React.FC<HistoricalAnalyticsProps> = ({
     data: analytics,
     isLoading,
     isError,
+    refetch,
   } = useQuery<HistoricalAnalyticsResponse>({
     queryKey: ["historical-analytics", endYear, endMonth],
     queryFn: () => fetchHistoricalAnalytics({ months: 6, endYear, endMonth }),
@@ -253,9 +255,17 @@ export const HistoricalAnalytics: React.FC<HistoricalAnalyticsProps> = ({
         <div className="p-12 text-center rounded-xl border border-ledger-border bg-ledger-surface text-ledger-ink">
           <AlertCircle className="w-8 h-8 text-ledger-red mx-auto mb-2" />
           <h3 className="text-sm font-semibold">Failed to load analytics</h3>
-          <p className="text-xs text-ledger-inkSubtle mt-1">
+          <p className="text-xs text-ledger-inkSubtle mt-1 mb-4">
             Unable to load financial analytics for the selected range.
           </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-ledger-teal text-white hover:bg-ledger-teal/90 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Retry</span>
+          </button>
         </div>
       ) : (
         <>

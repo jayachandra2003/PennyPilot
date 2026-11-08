@@ -203,18 +203,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setIsMobileMoreOpen(false)}
         >
           <div
-            className="bg-ledger-surface/90 backdrop-blur-2xl border-t border-ledger-border rounded-t-3xl p-5 shadow-modal space-y-4 max-h-[85vh] overflow-y-auto"
+            className="bg-white dark:bg-[#121C28] border-t border-slate-200 dark:border-slate-800 rounded-t-3xl p-5 shadow-modal space-y-4 max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <PennyPilotLogo variant="symbol" size="xs" />
-                <span className="font-bold text-sm text-ledger-ink">PennyPilot Hub</span>
+                <span className="font-bold text-sm text-slate-900 dark:text-slate-100">PennyPilot Hub</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileMoreOpen(false)}
-                className="p-1 rounded-md text-ledger-inkSubtle hover:text-ledger-ink hover:bg-ledger-surfaceSubtle min-h-[36px] min-w-[36px] flex items-center justify-center"
+                className="p-1.5 rounded-lg text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
@@ -223,64 +223,64 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Secondary Modules */}
             <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-ledger-inkSubtle px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-2">
                 Features & Intelligence
               </span>
               <button
                 type="button"
                 onClick={() => handleMobileSelect("insights")}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all min-h-[44px] ${
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all min-h-[48px] ${
                   currentTab === "insights"
-                    ? "bg-teal-50/80 text-teal-800 font-semibold border border-teal-200/80 dark:bg-ledger-tealLight dark:text-ledger-teal dark:border-ledger-teal/30"
-                    : "text-ledger-ink hover:bg-ledger-surfaceSubtle"
+                    ? "bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold border border-teal-200 dark:border-teal-800/60"
+                    : "text-slate-800 dark:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <GlassIcon icon={Lightbulb} variant="amber" size="xs" />
                   <div className="text-left">
-                    <span className="text-xs font-semibold block">Financial Insights</span>
-                    <span className="text-[10px] text-ledger-inkSubtle block">Deterministic signals & anomaly detection</span>
+                    <span className="text-xs font-semibold block text-slate-900 dark:text-slate-100">Financial Insights</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Deterministic signals & anomaly detection</span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-ledger-inkSubtle" />
+                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               </button>
 
               <button
                 type="button"
                 onClick={() => handleMobileSelect("categories")}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all min-h-[44px] ${
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all min-h-[48px] ${
                   currentTab === "categories"
-                    ? "bg-teal-50/80 text-teal-800 font-semibold border border-teal-200/80 dark:bg-ledger-tealLight dark:text-ledger-teal dark:border-ledger-teal/30"
-                    : "text-ledger-ink hover:bg-ledger-surfaceSubtle"
+                    ? "bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold border border-teal-200 dark:border-teal-800/60"
+                    : "text-slate-800 dark:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <GlassIcon icon={Tags} variant="indigo" size="xs" />
                   <div className="text-left">
-                    <span className="text-xs font-semibold block">Category Management</span>
-                    <span className="text-[10px] text-ledger-inkSubtle block">Custom icons, colors & taxonomy</span>
+                    <span className="text-xs font-semibold block text-slate-900 dark:text-slate-100">Category Management</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Custom icons, colors & taxonomy</span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-ledger-inkSubtle" />
+                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               </button>
 
               <button
                 type="button"
                 onClick={() => handleMobileSelect("copilot")}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all min-h-[44px] ${
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all min-h-[48px] ${
                   currentTab === "copilot"
-                    ? "bg-teal-50/80 text-teal-800 font-semibold border border-teal-200/80 dark:bg-ledger-tealLight dark:text-ledger-teal dark:border-ledger-teal/30"
-                    : "text-ledger-ink hover:bg-ledger-surfaceSubtle"
+                    ? "bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 font-semibold border border-teal-200 dark:border-teal-800/60"
+                    : "text-slate-800 dark:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <GlassIcon icon={Sparkles} variant="teal" size="xs" />
                   <div className="text-left">
-                    <span className="text-xs font-semibold block">AI Copilot</span>
-                    <span className="text-[10px] text-ledger-inkSubtle block">Grounded financial insights</span>
+                    <span className="text-xs font-semibold block text-slate-900 dark:text-slate-100">AI Copilot</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Grounded financial insights</span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-ledger-inkSubtle" />
+                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               </button>
 
               {user && (
@@ -291,16 +291,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsMobileMoreOpen(false);
                       onOpenProfile?.();
                     }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl text-ledger-ink hover:bg-ledger-surfaceSubtle transition-all min-h-[44px]"
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-slate-800 dark:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-all min-h-[48px] border border-transparent"
                   >
                     <div className="flex items-center gap-3">
                       <GlassIcon icon={UserIcon} variant="slate" size="xs" />
                       <div className="text-left">
-                        <span className="text-xs font-semibold block">Edit Profile</span>
-                        <span className="text-[10px] text-ledger-inkSubtle block">Avatar, name, age & details</span>
+                        <span className="text-xs font-semibold block text-slate-900 dark:text-slate-100">Edit Profile</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Avatar, name, age & details</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-ledger-inkSubtle" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                   </button>
 
                   <button
@@ -309,66 +309,66 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsMobileMoreOpen(false);
                       onSelectTab("settings");
                     }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl text-ledger-ink hover:bg-ledger-surfaceSubtle transition-all min-h-[44px]"
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-slate-800 dark:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-all min-h-[48px] border border-transparent"
                   >
                     <div className="flex items-center gap-3">
                       <GlassIcon icon={UserIcon} variant="teal" size="xs" />
                       <div className="text-left">
-                        <span className="text-xs font-semibold block">Settings</span>
-                        <span className="text-[10px] text-ledger-inkSubtle block">Theme, currency & account</span>
+                        <span className="text-xs font-semibold block text-slate-900 dark:text-slate-100">Settings</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Theme, currency & account</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-ledger-inkSubtle" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                   </button>
                 </>
               )}
             </div>
 
             {/* Legal & Standards */}
-            <div className="space-y-1 pt-2 border-t border-ledger-borderSubtle">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-ledger-inkSubtle px-2">
+            <div className="space-y-1 pt-2 border-t border-slate-200/80 dark:border-slate-800">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-2">
                 Standards & Governance
               </span>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => handleMobileLegal("privacy")}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg border border-ledger-borderSubtle bg-ledger-surfaceSubtle/60 hover:bg-ledger-surfaceSubtle text-center min-h-[44px]"
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-center min-h-[44px] transition-colors"
                 >
-                  <FileText className="w-4 h-4 text-ledger-teal mb-1" />
-                  <span className="text-[10px] font-medium text-ledger-ink leading-tight">Privacy</span>
+                  <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400 mb-1" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200 leading-tight">Privacy</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleMobileLegal("terms")}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg border border-ledger-borderSubtle bg-ledger-surfaceSubtle/60 hover:bg-ledger-surfaceSubtle text-center min-h-[44px]"
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-center min-h-[44px] transition-colors"
                 >
-                  <Shield className="w-4 h-4 text-ledger-teal mb-1" />
-                  <span className="text-[10px] font-medium text-ledger-ink leading-tight">Terms</span>
+                  <Shield className="w-4 h-4 text-teal-600 dark:text-teal-400 mb-1" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200 leading-tight">Terms</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleMobileLegal("security")}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg border border-ledger-borderSubtle bg-ledger-surfaceSubtle/60 hover:bg-ledger-surfaceSubtle text-center min-h-[44px]"
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-center min-h-[44px] transition-colors"
                 >
-                  <Lock className="w-4 h-4 text-ledger-teal mb-1" />
-                  <span className="text-[10px] font-medium text-ledger-ink leading-tight">Security</span>
+                  <Lock className="w-4 h-4 text-teal-600 dark:text-teal-400 mb-1" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200 leading-tight">Security</span>
                 </button>
               </div>
             </div>
 
             {/* Logout on Mobile */}
             {user && (
-              <div className="pt-2 border-t border-ledger-borderSubtle">
+              <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
                     setIsMobileMoreOpen(false);
                     logout();
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 dark:bg-ledger-redLight dark:text-ledger-red dark:border-ledger-red/30 dark:hover:bg-ledger-red/20 min-h-[44px]"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 min-h-[44px] transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out of PennyPilot</span>

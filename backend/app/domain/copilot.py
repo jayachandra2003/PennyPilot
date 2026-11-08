@@ -253,6 +253,11 @@ class FactBundleBuilder:
                 actual_expense_paise=curr_expense_paise,
                 savings_target_paise=getattr(db.query(User).filter(User.id == user_id).first(), "monthly_savings_target_paise", None),
             ),
+            "user_profile": {
+                "full_name": getattr(db.query(User).filter(User.id == user_id).first(), "display_name", None),
+                "email": getattr(db.query(User).filter(User.id == user_id).first(), "email", None),
+                "currency": getattr(db.query(User).filter(User.id == user_id).first(), "currency", "INR"),
+            },
         }
 
 
@@ -263,6 +268,8 @@ class IntentClassifier:
     def get_navigation_action(intent: str, query: str = "") -> Optional[Dict[str, str]]:
         actions = {
             "app_about": {"label": "Explore Dashboard", "target": "dashboard"},
+            "app_capabilities": {"label": "Explore Dashboard", "target": "dashboard"},
+            "user_identity": {"label": "Open Profile Settings", "target": "settings", "section": "profile"},
             "nav_theme": {"label": "Open Appearance Settings", "target": "settings", "section": "appearance"},
             "nav_account_deletion": {"label": "Open Account & Security", "target": "settings", "section": "account"},
             "nav_monthly_statement": {"label": "Open Financial Insights", "target": "insights"},
@@ -286,6 +293,8 @@ class IntentClassifier:
         Classifies query into one of:
         - greeting
         - small_talk
+        - user_identity
+        - app_capabilities
         - app_about
         - nav_theme
         - nav_account_deletion
@@ -309,23 +318,41 @@ class IntentClassifier:
         q = query.lower().strip()
         clean_q = re.sub(r"[^\w\s]", "", q).strip()
 
-        # 1. Greetings & Salutations (pure greetings without financial keywords)
+        # 1. User Identity Questions (e.g. "Who am I?", "What is my name?")
+        identity_phrases = [
+            "who am i", "what is my name", "who am i logged in as", "my name", "my identity",
+            "what is my profile", "my account", "what is my email", "what account is this",
+            "tell me my name", "whats my name", "who am i registered as", "what is my account"
+        ]
+        if any(clean_q == p or clean_q.startswith(p + " ") or clean_q.endswith(" " + p) for p in identity_phrases):
+            return "user_identity", None
+
+        # 2. Greetings & Salutations (pure greetings without financial keywords)
         greetings = [
-            "hi", "hello", "hey", "good morning", "good evening", "good afternoon",
-            "namaste", "greetings", "hey there", "hi there", "hello copilot", "hi pennypilot",
+            "hi", "hello", "hey", "good morning", "good evening", "good afternoon", "good day",
+            "namaste", "greetings", "hey there", "hi there", "hello there", "hello copilot", "hi copilot",
+            "hi pennypilot", "hello pennypilot", "morning", "evening",
         ]
         if clean_q in greetings or (clean_q.startswith(("hi ", "hello ", "hey ")) and len(clean_q.split()) <= 4):
             if not any(w in clean_q for w in ["spend", "expense", "budget", "save", "cut", "reduce", "transaction", "category"]):
                 return "greeting", None
 
-        # 2. Conversational Small Talk
+        # 3. Conversational Small Talk
         if any(w in clean_q for w in [
             "how are you", "how are you doing", "how is it going", "hows it going",
-            "who are you", "what can you do", "what are your capabilities", "introduce yourself",
+            "how are things", "how are you feeling", "how do you do",
         ]):
             return "small_talk", None
 
-        # 3. About PennyPilot (Application Overview)
+        # 4. App Capabilities & Help ("What can you do?", "Help me", etc.)
+        if any(clean_q == p or p in clean_q for p in [
+            "what can you do", "what are your capabilities", "help me", "help",
+            "how can you help", "what do you do", "what are your features",
+            "introduce yourself", "how do i use you", "how can you assist",
+        ]):
+            return "app_capabilities", None
+
+        # 5. About PennyPilot (Application Overview)
         if any(w in clean_q for w in [
             "what is pennypilot", "tell me about pennypilot", "about pennypilot",
             "how does pennypilot work", "what does pennypilot do", "what does this app do",
@@ -510,18 +537,56 @@ class DeterministicNarrativeGenerator:
     @staticmethod
     def generate(intent: str, target_cat: Optional[str], facts: Dict[str, Any], question: Optional[str] = None) -> str:
         # Conversational & Application Navigation Responses
+        if intent == "user_identity":
+            user_profile = facts.get("user_profile") or {}
+            full_name = user_profile.get("full_name")
+            email = user_profile.get("email")
+            is_name_query = question and any(w in question.lower() for w in ["name"])
+            if is_name_query and full_name:
+                return (
+                    f"Your registered name is **{full_name}** on account **{email or ''}**. "
+                    "How can I assist you with your financial ledger today?"
+                )
+            if full_name and email:
+                return (
+                    f"You are currently signed in as **{full_name}** ({email}). "
+                    "Your workspace is configured with **INR (₹)** as your primary currency. "
+                    "How can I assist you with your financial ledger today?"
+                )
+            elif email:
+                return (
+                    f"You are signed in with the account **{email}**. "
+                    "How can I assist you with your financial ledger today?"
+                )
+            return "You are signed in to your PennyPilot account. How can I assist you with your finances today?"
+
         if intent == "greeting":
+            user_profile = facts.get("user_profile") or {}
+            full_name = user_profile.get("full_name")
+            first_name = full_name.split()[0] if full_name else ""
+            greeting_prefix = f"Hello, {first_name}!" if first_name else "Hello!"
             return (
-                "Hi! I'm your PennyPilot assistant. How can I help you today? "
-                "You can ask me about your monthly spending, budget pacing, savings performance, "
-                "or how to navigate and use PennyPilot."
+                f"{greeting_prefix} How can I help you with your finances today? "
+                "You can ask me about your monthly spending, budget pacing, top categories, or receipt scanning."
             )
 
         if intent == "small_talk":
             return (
-                "I'm doing well, thank you! I'm here and ready to help you analyze your financial ledger, "
-                "explore spending cutbacks, or guide you through any feature in PennyPilot. "
+                "I'm doing well, thank you for asking! I'm here and ready to help you analyze your financial ledger, "
+                "monitor your budget ceilings, or guide you through PennyPilot. "
                 "What would you like to check today?"
+            )
+
+        if intent == "app_capabilities":
+            return (
+                "I'm your **PennyPilot AI Financial Copilot**! Here is what I can do for you:\n\n"
+                "• **Analyze Spending & Income**: Ask about your total expenses, net cash flow, or monthly savings rate.\n"
+                "• **Budget Pacing & Ceilings**: Check if your current spending trajectory will remain within your monthly budget limits.\n"
+                "• **Category Breakdowns**: See where your money went across dining, groceries, utilities, and other categories.\n"
+                "• **Anomaly Detection**: Flag unusually large transactions or spending spikes using deterministic statistical analysis.\n"
+                "• **Receipt Scanning**: Guide you on uploading and reviewing receipts with our local ₹0 OCR engine.\n"
+                "• **Statements & Navigation**: Guide you to export monthly PDF/DOCX statements or adjust account settings.\n\n"
+                "Feel free to ask a question like *'How much did I spend this month?'* or *'Am I on track with my budget?'*"
             )
 
         if intent == "app_about":

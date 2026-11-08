@@ -90,6 +90,14 @@ def build_google_authorization_url(
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(seconds=300)  # 5 minutes validity
 
+    # Dynamically resolve redirect_uri matching active public or local origin
+    base_url = settings.resolve_base_url(request)
+    if ":5173" in base_url or "localhost" in base_url or "127.0.0.1" in base_url:
+        redirect_base = f"{settings.BACKEND_BASE_URL}{settings.API_V1_STR}"
+    else:
+        redirect_base = f"{base_url}{settings.API_V1_STR}"
+    resolved_redirect_uri = f"{redirect_base}/auth/google/callback"
+
     user_agent_hash = None
     ip_address = None
     if request:
@@ -104,6 +112,7 @@ def build_google_authorization_url(
         code_verifier=code_verifier,
         nonce=nonce,
         purpose=purpose,
+        redirect_uri=resolved_redirect_uri,
         user_id=user_id,
         initiating_session_id=initiating_session_id,
         user_agent_hash=user_agent_hash,
@@ -117,7 +126,7 @@ def build_google_authorization_url(
 
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
-        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "redirect_uri": resolved_redirect_uri,
         "response_type": "code",
         "scope": "openid email profile",
         "state": state,
@@ -132,18 +141,26 @@ def build_google_authorization_url(
     return auth_url, cookie_value
 
 
-def make_oauth_redirect_with_cleanup(target_url: str) -> RedirectResponse:
+def make_oauth_redirect_with_cleanup(target_url: str, request: Optional[Request] = None) -> RedirectResponse:
     """
     Return RedirectResponse with guaranteed Set-Cookie deletion of pennypilot_oauth_txn
     across every exit path (success, error, cancellation, replay).
     """
+    is_secure = settings.is_https_request(request) if hasattr(settings, "is_https_request") else settings.COOKIE_SECURE
     response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
+    response.delete_cookie(
+        key=settings.OAUTH_TXN_COOKIE_NAME,
+        path="/",
+        domain=settings.COOKIE_DOMAIN,
+        samesite="lax",
+        secure=is_secure,
+    )
     response.delete_cookie(
         key=settings.OAUTH_TXN_COOKIE_NAME,
         path="/api/v1/auth/google",
         domain=settings.COOKIE_DOMAIN,
         samesite="lax",
-        secure=settings.COOKIE_SECURE,
+        secure=is_secure,
     )
     return response
 
@@ -191,7 +208,11 @@ def validate_and_consume_oauth_transaction(
     return txn
 
 
-async def exchange_google_code_for_tokens(code: str, code_verifier: str) -> Dict[str, Any]:
+async def exchange_google_code_for_tokens(
+    code: str,
+    code_verifier: str,
+    redirect_uri: Optional[str] = None,
+) -> Dict[str, Any]:
     """Exchange authorization code with Google token endpoint using PKCE verifier."""
     payload = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -199,7 +220,7 @@ async def exchange_google_code_for_tokens(code: str, code_verifier: str) -> Dict
         "code": code,
         "code_verifier": code_verifier,
         "grant_type": "authorization_code",
-        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "redirect_uri": redirect_uri or settings.GOOGLE_REDIRECT_URI,
     }
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:

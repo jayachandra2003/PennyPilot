@@ -602,9 +602,9 @@ export function getAvatarImageUrl(user: UserProfile | null, token: string | null
 
 export async function fetchCategories(includeArchived: boolean = false): Promise<CategoryItem[]> {
   const url = `${API_BASE_URL}/categories${includeArchived ? "?include_archived=true" : ""}`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: getAuthHeaders(),
-  });
+  }, 15000);
   if (!res.ok) throw new Error("Failed to load categories");
   return await res.json();
 }
@@ -671,9 +671,9 @@ export async function fetchHistoricalAnalytics(params: {
   if (params.endYear) query.append("end_year", params.endYear.toString());
   if (params.endMonth) query.append("end_month", params.endMonth.toString());
 
-  const res = await fetch(`${API_BASE_URL}/transactions/analytics/history?${query.toString()}`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/transactions/analytics/history?${query.toString()}`, {
     headers: getAuthHeaders(),
-  });
+  }, 15000);
   if (!res.ok) throw new Error("Failed to load historical analytics");
   return await res.json();
 }
@@ -751,11 +751,14 @@ export async function deleteTransaction(id: string): Promise<void> {
 }
 
 export async function parseNaturalLanguage(text: string): Promise<NLParseResponse> {
-  const res = await fetch(`${API_BASE_URL}/transactions/parse`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/transactions/parse`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ text }),
-  });
+  }, 15000);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || "Failed to parse expense");
@@ -995,6 +998,38 @@ export function getGoogleOAuthLoginUrl(): string {
     return `${window.location.protocol}//${window.location.hostname}:8000/api/v1/auth/google/login`;
   }
   return `${API_BASE_URL}/auth/google/login`;
+}
+
+/**
+ * Initiates Google OAuth account linking for the currently authenticated user.
+ * Returns { authorization_url: string } and sets the single-use transaction cookie.
+ */
+export async function linkGoogleAccount(): Promise<{ authorization_url: string }> {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/auth/google/link`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const message = await extractErrorMessage(res, "Failed to initiate Google account linking.");
+    throw new Error(message);
+  }
+  return await res.json();
+}
+
+/**
+ * Unlinks the Google OAuth identity from the user's account.
+ * Requires that the user has a primary password set to prevent account lockout.
+ */
+export async function unlinkGoogleAccount(): Promise<UserProfile> {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/auth/google/unlink`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const message = await extractErrorMessage(res, "Failed to unlink Google account.");
+    throw new Error(message);
+  }
+  return await res.json();
 }
 
 // -------------------------------------------------------------
@@ -1291,6 +1326,7 @@ export interface ReceiptExtractResponse {
   mime_type: string;
   merchant?: string | null;
   amount_paise?: number | null;
+  subtotal_paise?: number | null;
   date?: string | null;
   tax_paise?: number | null;
   line_items: ReceiptLineItem[];

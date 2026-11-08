@@ -86,6 +86,19 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
+        xfwd: true,
+      },
+    },
+  },
+  preview: {
+    port: Number(process.env.VITE_PREVIEW_PORT || 5174),
+    host: '127.0.0.1',
+    allowedHosts: ['.trycloudflare.com', 'localhost', '127.0.0.1'],
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_TARGET || 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        xfwd: true,
       },
     },
   },

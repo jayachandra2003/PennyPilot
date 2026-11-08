@@ -76,41 +76,55 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </div>
 
         {/* Right Controls: Period Selector, Date Stepper & Quick Add */}
-        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3 min-w-0 relative z-30">
-          {/* Period Selector Toggle [ Monthly | Yearly ] */}
-          <div
-            role="group"
-            aria-label="Reporting period"
-            className="inline-flex items-center p-0.5 bg-ledger-surfaceSubtle border border-ledger-border rounded-xl shadow-xs"
-          >
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto min-w-0 relative z-30">
+          {/* Mobile Top Row: Period Selector on left, Quick Add on right (Desktop: inline via sm:contents) */}
+          <div className="flex items-center justify-between sm:contents gap-2.5">
+            {/* Period Selector Toggle [ Monthly | Yearly ] */}
+            <div
+              role="group"
+              aria-label="Reporting period"
+              className="inline-flex items-center p-0.5 bg-ledger-surfaceSubtle border border-ledger-border rounded-xl shadow-xs shrink-0"
+            >
+              <button
+                type="button"
+                onClick={() => onPeriodChange("monthly")}
+                aria-pressed={period === "monthly"}
+                className={`px-3 py-1.5 min-h-[38px] sm:min-h-[36px] rounded-lg text-xs font-semibold transition-all cursor-pointer focus-ring select-none ${
+                  period === "monthly"
+                    ? "bg-white dark:bg-[#192633] text-ledger-teal dark:text-ledger-teal shadow-xs border border-slate-200 dark:border-white/10"
+                    : "text-ledger-inkSubtle hover:text-ledger-ink"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => onPeriodChange("yearly")}
+                aria-pressed={period === "yearly"}
+                className={`px-3 py-1.5 min-h-[38px] sm:min-h-[36px] rounded-lg text-xs font-semibold transition-all cursor-pointer focus-ring select-none ${
+                  period === "yearly"
+                    ? "bg-white dark:bg-[#192633] text-ledger-teal dark:text-ledger-teal shadow-xs border border-slate-200 dark:border-white/10"
+                    : "text-ledger-inkSubtle hover:text-ledger-ink"
+                }`}
+              >
+                Yearly
+              </button>
+            </div>
+
+            {/* Quick Add Action Button (Mobile: top-right aligned; Desktop: order-last) */}
             <button
               type="button"
-              onClick={() => onPeriodChange("monthly")}
-              aria-pressed={period === "monthly"}
-              className={`px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold transition-all cursor-pointer focus-ring select-none ${
-                period === "monthly"
-                  ? "bg-white dark:bg-[#192633] text-ledger-teal dark:text-ledger-teal shadow-xs border border-slate-200 dark:border-white/10"
-                  : "text-ledger-inkSubtle hover:text-ledger-ink"
-              }`}
+              onClick={onQuickAdd}
+              className="btn-primary text-xs sm:text-sm px-3.5 sm:px-4 py-2 min-h-[40px] sm:min-h-[40px] focus-ring shrink-0 shadow-xs cursor-pointer select-none sm:order-last"
+              title="Quick add transaction"
             >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() => onPeriodChange("yearly")}
-              aria-pressed={period === "yearly"}
-              className={`px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold transition-all cursor-pointer focus-ring select-none ${
-                period === "yearly"
-                  ? "bg-white dark:bg-[#192633] text-ledger-teal dark:text-ledger-teal shadow-xs border border-slate-200 dark:border-white/10"
-                  : "text-ledger-inkSubtle hover:text-ledger-ink"
-              }`}
-            >
-              Yearly
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Quick Add</span>
             </button>
           </div>
 
-          {/* Date Navigator - Explicit positive stacking level */}
-          <div className="inline-flex items-center bg-ledger-surfaceSubtle border border-ledger-border rounded-xl p-0.5 shrink-0 shadow-xs relative z-40">
+          {/* Date Navigator - Full-width balanced stepper on mobile, compact on desktop */}
+          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-center bg-ledger-surfaceSubtle border border-ledger-border rounded-xl p-0.5 shrink-0 shadow-xs relative z-40">
             <button
               type="button"
               onClick={handlePrev}
@@ -121,16 +135,18 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </button>
 
             {period === "yearly" ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-mono font-semibold text-ledger-ink select-none">
+              <div className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-mono font-semibold text-ledger-ink select-none">
                 <Calendar className="w-4 h-4 text-ledger-teal shrink-0" aria-hidden="true" />
                 <span>{year}</span>
               </div>
             ) : (
-              <CalendarMonthPicker
-                year={year}
-                month={month}
-                onSelect={onMonthChange}
-              />
+              <div className="flex-1 sm:flex-initial flex items-center justify-center">
+                <CalendarMonthPicker
+                  year={year}
+                  month={month}
+                  onSelect={onMonthChange}
+                />
+              </div>
             )}
 
             <button
@@ -142,17 +158,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Quick Add Action Button */}
-          <button
-            type="button"
-            onClick={onQuickAdd}
-            className="btn-primary text-xs sm:text-sm px-4 py-2 min-h-[44px] sm:min-h-[40px] focus-ring shrink-0 shadow-xs cursor-pointer select-none"
-            title="Quick add transaction"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>Quick Add</span>
-          </button>
         </div>
       </div>
     </div>

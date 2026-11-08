@@ -1,5 +1,5 @@
 """Notification service for creating, managing, and synchronizing user notifications."""
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func

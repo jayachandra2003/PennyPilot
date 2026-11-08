@@ -50,17 +50,78 @@ export const NotificationsPopover: React.FC = () => {
 
   const markReadMutation = useMutation({
     mutationFn: markNotificationAsRead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const previous = queryClient.getQueryData<any>(["notifications"]);
+      if (previous) {
+        queryClient.setQueryData(["notifications"], {
+          ...previous,
+          unread_count: Math.max(0, (previous.unread_count || 1) - 1),
+          notifications: (previous.notifications || []).map((n: NotificationItem) =>
+            n.id === id ? { ...n, is_read: true } : n
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["notifications"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const previous = queryClient.getQueryData<any>(["notifications"]);
+      if (previous) {
+        queryClient.setQueryData(["notifications"], {
+          ...previous,
+          unread_count: 0,
+          notifications: (previous.notifications || []).map((n: NotificationItem) => ({ ...n, is_read: true })),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["notifications"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteNotification,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const previous = queryClient.getQueryData<any>(["notifications"]);
+      if (previous) {
+        const target = (previous.notifications || []).find((n: NotificationItem) => n.id === id);
+        const decr = target && !target.is_read ? 1 : 0;
+        queryClient.setQueryData(["notifications"], {
+          ...previous,
+          unread_count: Math.max(0, (previous.unread_count || 0) - decr),
+          notifications: (previous.notifications || []).filter((n: NotificationItem) => n.id !== id),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["notifications"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   // Close on outside click or Escape key
@@ -251,18 +312,32 @@ export const NotificationsPopover: React.FC = () => {
                             </span>
                           )}
                           {!item.is_read && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markReadMutation.mutate(item.id);
+                              }}
+                              className="text-[11px] font-medium text-ledger-teal hover:underline flex items-center gap-1 focus-ring cursor-pointer"
+                              title="Mark as read"
+                            >
+                              <span>Mark read</span>
+                            </button>
+                          )}
+                          {!item.is_read && (
                             <span className="w-1.5 h-1.5 rounded-full bg-ledger-teal" />
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Dismiss Button */}
+                    {/* Dismiss Button (Visible on mobile, revealed on hover on desktop) */}
                     <button
                       type="button"
                       onClick={(e) => handleDismiss(e, item.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-ledger-inkSubtle hover:text-ledger-ink rounded transition-opacity"
+                      className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 hover:opacity-100 p-1.5 min-w-[28px] min-h-[28px] flex items-center justify-center text-ledger-inkSubtle hover:text-ledger-ink rounded-md transition-opacity cursor-pointer shrink-0"
                       aria-label="Dismiss notification"
+                      title="Dismiss notification"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

@@ -65,6 +65,7 @@ def create_password_reset_token(
 def request_password_reset(
     db: Session,
     email: str,
+    base_url: Optional[str] = None,
 ) -> Tuple[bool, str, Optional[int]]:
     """
     Initiate a password reset request.
@@ -104,7 +105,8 @@ def request_password_reset(
     if not raw_token:
         raw_token = secrets.token_urlsafe(32)
 
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+    active_base = base_url.rstrip("/") if base_url else settings.FRONTEND_URL
+    reset_url = f"{active_base}/reset-password?token={raw_token}"
     send_password_reset_email(user.email, user.display_name, reset_url)
     return True, "SENT_IF_EXISTS", None
 

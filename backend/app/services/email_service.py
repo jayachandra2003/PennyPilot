@@ -77,16 +77,44 @@ def send_email_smtp(
     msg.attach(MIMEText(text_content, "plain", "utf-8"))
     msg.attach(MIMEText(html_content, "html", "utf-8"))
 
-    try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
-            if settings.SMTP_USE_TLS:
-                server.starttls()
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            server.send_message(msg)
-            logger.info(f"[SMTP SUCCESS] Dispatched '{subject}' ({msg_id}) to {mask_email(to_email)}")
-            return True
-    except smtplib.SMTPAuthenticationError as e:
-        err_msg = str(e)
+    # Multi-port fallback strategy for robust delivery across campus / carrier NAT pools
+    ports_to_try = [settings.SMTP_PORT]
+    for alt_port in [465, 2525]:
+        if alt_port not in ports_to_try:
+            ports_to_try.append(alt_port)
+
+    last_error: Optional[Exception] = None
+
+    for attempt in range(2):
+        for port in ports_to_try:
+            try:
+                if port == 465:
+                    with smtplib.SMTP_SSL(settings.SMTP_HOST, port, timeout=6) as server:
+                        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(settings.SMTP_HOST, port, timeout=6) as server:
+                        if settings.SMTP_USE_TLS:
+                            server.starttls()
+                        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                        server.send_message(msg)
+
+                logger.info(f"[SMTP SUCCESS] Dispatched '{subject}' ({msg_id}) to {mask_email(to_email)} via port {port}")
+                return True
+            except smtplib.SMTPAuthenticationError as e:
+                last_error = e
+                err_msg = str(e)
+                if "525" in err_msg or "Unauthorized IP" in err_msg:
+                    logger.warning(f"[SMTP RETRY] Port {port} encountered Brevo 525 IP restriction; attempting alternative socket...")
+                else:
+                    logger.error(f"[SMTP AUTH ERROR] Brevo rejected SMTP credentials on port {port}: {type(e).__name__}")
+            except Exception as e:
+                last_error = e
+                logger.warning(f"[SMTP RETRY] Port {port} failed ({type(e).__name__}); attempting alternative socket...")
+
+    # If all attempts failed
+    if last_error:
+        err_msg = str(last_error)
         if "525" in err_msg or "Unauthorized IP" in err_msg:
             logger.error(
                 f"[BREVO IP RESTRICTION] Brevo rejected connection with 525 Unauthorized IP address. "
@@ -94,11 +122,8 @@ def send_email_smtp(
                 f"or deactivate unauthorized IP blocking."
             )
         else:
-            logger.error(f"[SMTP AUTH ERROR] Brevo rejected SMTP credentials: {type(e).__name__}")
-        return False
-    except Exception as e:
-        logger.error(f"[SMTP ERROR] Failed to send email to {mask_email(to_email)}: {type(e).__name__}")
-        return False
+            logger.error(f"[SMTP ERROR] Failed to send email to {mask_email(to_email)}: {type(last_error).__name__}")
+    return False
 
 
 def build_verification_email_html(recipient_name: str, verification_url: str) -> str:

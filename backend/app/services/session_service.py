@@ -175,15 +175,16 @@ def rotate_session(
     return create_session(db, user_id, request)
 
 
-def set_session_cookies(response: Response, raw_token: str) -> None:
+def set_session_cookies(response: Response, raw_token: str, request: Optional[Request] = None) -> None:
     """Attach HttpOnly session cookie and readable CSRF cookie to response."""
+    is_secure = settings.is_https_request(request) if hasattr(settings, "is_https_request") else settings.COOKIE_SECURE
     # 1. HttpOnly Session Cookie (host-only)
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=raw_token,
         httponly=True,
         samesite=settings.COOKIE_SAMESITE,
-        secure=settings.COOKIE_SECURE,
+        secure=is_secure,
         path="/",
         max_age=settings.SESSION_ABSOLUTE_TIMEOUT_DAYS * 86400,
         domain=settings.COOKIE_DOMAIN,
@@ -196,26 +197,27 @@ def set_session_cookies(response: Response, raw_token: str) -> None:
         value=csrf_token,
         httponly=False,
         samesite=settings.COOKIE_SAMESITE,
-        secure=settings.COOKIE_SECURE,
+        secure=is_secure,
         path="/",
         max_age=settings.SESSION_ABSOLUTE_TIMEOUT_DAYS * 86400,
         domain=settings.COOKIE_DOMAIN,
     )
 
 
-def clear_session_cookies(response: Response) -> None:
+def clear_session_cookies(response: Response, request: Optional[Request] = None) -> None:
     """Clear session and CSRF cookies on logout or session invalidation."""
+    is_secure = settings.is_https_request(request) if hasattr(settings, "is_https_request") else settings.COOKIE_SECURE
     response.delete_cookie(
         key=settings.SESSION_COOKIE_NAME,
         path="/",
         domain=settings.COOKIE_DOMAIN,
         samesite=settings.COOKIE_SAMESITE,
-        secure=settings.COOKIE_SECURE,
+        secure=is_secure,
     )
     response.delete_cookie(
         key=settings.CSRF_COOKIE_NAME,
         path="/",
         domain=settings.COOKIE_DOMAIN,
         samesite=settings.COOKIE_SAMESITE,
-        secure=settings.COOKIE_SECURE,
+        secure=is_secure,
     )

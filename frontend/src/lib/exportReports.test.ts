@@ -14,6 +14,8 @@ import {
   exportMonthlyStatementCSV,
   exportMonthlyStatementPDF,
   exportMonthlyStatementDOCX,
+  sanitizeCurrencyForDoc,
+  formatDocINR,
 } from "./exportReports";
 import type { TransactionItem, HistoricalAnalyticsResponse, MonthlyReportResponse } from "./api";
 
@@ -204,5 +206,21 @@ describe("Deterministic Financial Reports Exporter", () => {
     expect(() => exportMonthlyStatementCSV(mockReport)).not.toThrow();
     expect(() => exportMonthlyStatementPDF(mockReport)).not.toThrow();
     expect(() => exportMonthlyStatementDOCX(mockReport)).not.toThrow();
+  });
+
+  it("sanitizes currency symbols for standard PDF/DOCX fonts to avoid 0xB9 superscript ¹ glitches", () => {
+    expect(sanitizeCurrencyForDoc("₹81,000.00")).toBe("Rs. 81,000.00");
+    expect(sanitizeCurrencyForDoc("-₹8,824.00")).toBe("-Rs. 8,824.00");
+    expect(sanitizeCurrencyForDoc("+₹72,175.00")).toBe("+Rs. 72,175.00");
+    expect(sanitizeCurrencyForDoc("₹38,000.00")).toBe("Rs. 38,000.00");
+    expect(sanitizeCurrencyForDoc(null)).toBe("Rs. 0.00");
+
+    expect(formatDocINR(8100000)).toBe("Rs. 81,000.00");
+    expect(formatDocINR(-882400)).toBe("-Rs. 8,824.00");
+    expect(formatDocINR(0)).toBe("Rs. 0.00");
+
+    // Ensure no Unicode rupee glyphs remain
+    expect(sanitizeCurrencyForDoc("₹81,000.00")).not.toContain("₹");
+    expect(formatDocINR(8100000)).not.toContain("₹");
   });
 });

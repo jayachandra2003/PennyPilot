@@ -34,12 +34,9 @@ class User(Base, TimestampMixin):
     @property
     def email_verified(self) -> bool:
         """Email verification status.
-        True if explicitly verified, or verified via Google OIDC account, or consumed verification token,
-        or seeded demo evaluator account.
+        True if explicitly verified, or verified via Google OIDC account, or consumed verification token.
         """
         if getattr(self, "_email_verified", False):
-            return True
-        if getattr(self, "email", "") == "demo@pennypilot.in":
             return True
         try:
             if getattr(self, "oauth_accounts", None) and len(self.oauth_accounts) > 0:

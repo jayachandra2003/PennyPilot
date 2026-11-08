@@ -110,6 +110,7 @@ export const CategoryManagement: React.FC = () => {
     data: categories = [],
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ["categories", includeArchived],
     queryFn: () => fetchCategories(includeArchived),
@@ -333,9 +334,17 @@ export const CategoryManagement: React.FC = () => {
         <div className="p-8 text-center rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200">
           <AlertTriangle className="w-8 h-8 text-rose-600 dark:text-rose-400 mx-auto mb-2" />
           <h3 className="text-sm font-semibold">Failed to load categories</h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            Please check your network connection or try refreshing the page.
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-4">
+            Request timed out or network connection failed.
           </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Retry</span>
+          </button>
         </div>
       ) : filteredCategories.length === 0 ? (
         <div className="p-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-[#121C28] shadow-card">

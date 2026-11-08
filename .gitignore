@@ -1,7 +1,8 @@
 # Environment and Secrets (CRITICAL SECURITY)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.*.example
 *.env
 *.key
 *.pem
@@ -45,7 +46,12 @@ venv.bak/
 *.sqlite*
 penny_pilot.db*
 test.db*
+backups/
 uploads/
+
+# Local scratch fragments
+/APIs
+/Credentials
 
 # Node & Frontend
 node_modules/

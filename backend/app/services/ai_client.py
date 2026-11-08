@@ -84,14 +84,21 @@ class GeminiClient(BaseLLMClient):
         if not self.api_key:
             return None
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.api_key}"
+        text_model = getattr(settings, "GEMINI_TEXT_MODEL", "gemini-3.8-flash")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{text_model}:generateContent?key={self.api_key}"
         parts = [{"text": prompt}]
         if system_prompt:
             parts.insert(0, {"text": f"SYSTEM: {system_prompt}\n\nUSER:"})
 
+        # Gemini 3.8 Flash uses thinkingConfig (low/medium/high) for reasoning depth;
+        # legacy temperature/penalization parameters are ignored or return errors.
         payload = {
             "contents": [{"parts": parts}],
-            "generationConfig": {"temperature": 0.2},
+            "generationConfig": {
+                "thinkingConfig": {
+                    "thinkingLevel": "low"
+                }
+            },
         }
 
         try:
@@ -177,7 +184,7 @@ class AIOrchestrator:
 
         # For conversational and app navigation questions, return verified deterministic answer directly
         # to guarantee zero hallucination of fake routes, non-existent buttons, or speculative features.
-        if intent in ("greeting", "small_talk", "app_about") or intent.startswith("nav_"):
+        if intent in ("greeting", "small_talk", "app_about", "user_identity", "app_capabilities") or intent.startswith("nav_"):
             return {
                 "answer": deterministic_answer,
                 "provider": "deterministic",

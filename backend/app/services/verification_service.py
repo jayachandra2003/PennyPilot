@@ -139,6 +139,7 @@ def verify_email_token(
 def resend_verification_email(
     db: Session,
     email: str,
+    base_url: Optional[str] = None,
 ) -> Tuple[bool, str, Optional[int]]:
     """
     Resend verification email to an unverified user with rate limiting.
@@ -182,6 +183,7 @@ def resend_verification_email(
         # Dry-run or fallback when table is absent
         raw_token = secrets.token_urlsafe(32)
 
-    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={raw_token}"
+    active_base = base_url.rstrip("/") if base_url else settings.FRONTEND_URL
+    verification_url = f"{active_base}/verify-email?token={raw_token}"
     send_verification_email(user.email, user.display_name, verification_url)
     return True, "SENT", None

@@ -42,6 +42,7 @@ class OAuthTransaction(Base):
     code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
     nonce: Mapped[str] = mapped_column(String(64), nullable=False)
     purpose: Mapped[str] = mapped_column(String(20), default="login", nullable=False)  # 'login' or 'link'
+    redirect_uri: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     user_id: Mapped[Optional[str]] = mapped_column(
         String(36),
         ForeignKey("users.id", ondelete="SET NULL"),

@@ -270,7 +270,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
         </div>
 
-        {/* Tab Switcher (Only visible for Login / Register) */}
+        {/* Account Switcher (Sign In / Create Account) */}
         {(mode === "login" || mode === "register") && (
           <div className="px-5 pt-4">
             <div className="grid grid-cols-2 p-1 rounded-lg bg-ledger-bg border border-ledger-border text-xs font-medium">
@@ -469,6 +469,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       className="font-semibold underline hover:text-red-900 inline-block text-xs mt-0.5"
                     >
                       Switch to Sign In →
+                    </button>
+                  )}
+                  {(error.toLowerCase().includes("google sign-in") || error.toLowerCase().includes("continue with google")) && (
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      className="font-semibold underline hover:text-red-900 inline-block text-xs mt-1"
+                    >
+                      Continue with Google →
                     </button>
                   )}
                   {unverifiedEmailDetected && (

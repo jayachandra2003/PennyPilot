@@ -73,12 +73,26 @@ export const FloatingCopilotButton: React.FC<FloatingCopilotButtonProps> = ({
     }
   }, [transcript]);
 
+  // Default position helper based on viewport size
+  const getDefaultPos = () => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+    const btnSize = 56;
+    const paddingX = isMobile ? 16 : 24;
+    const bottomOffset = isMobile ? 84 : 24;
+    return {
+      x: (typeof window !== "undefined" ? window.innerWidth : 1024) - btnSize - paddingX,
+      y: (typeof window !== "undefined" ? window.innerHeight : 768) - btnSize - bottomOffset,
+    };
+  };
+
   // Clamp button within viewport boundaries
   const clampCoords = (x: number, y: number) => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
     const btnSize = 56;
-    const padding = 16;
+    const padding = isMobile ? 16 : 24;
+    const bottomNavbarOffset = isMobile ? 84 : 0; // Clear the 64px mobile bottom navbar + safe margin
     const maxX = window.innerWidth - btnSize - padding;
-    const maxY = window.innerHeight - btnSize - padding;
+    const maxY = window.innerHeight - btnSize - padding - bottomNavbarOffset;
     return {
       x: Math.max(padding, Math.min(x, maxX)),
       y: Math.max(padding, Math.min(y, maxY)),
@@ -110,9 +124,10 @@ export const FloatingCopilotButton: React.FC<FloatingCopilotButtonProps> = ({
     if (e.button !== 0) return;
     isDraggingRef.current = true;
     hasMovedRef.current = false;
+    const def = getDefaultPos();
     startPosRef.current = {
-      x: e.clientX - (coords?.x ?? (window.innerWidth - 76)),
-      y: e.clientY - (coords?.y ?? (window.innerHeight - 76)),
+      x: e.clientX - (coords?.x ?? def.x),
+      y: e.clientY - (coords?.y ?? def.y),
     };
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -142,9 +157,10 @@ export const FloatingCopilotButton: React.FC<FloatingCopilotButtonProps> = ({
     const touch = e.touches[0];
     isDraggingRef.current = true;
     hasMovedRef.current = false;
+    const def = getDefaultPos();
     startPosRef.current = {
-      x: touch.clientX - (coords?.x ?? (window.innerWidth - 76)),
-      y: touch.clientY - (coords?.y ?? (window.innerHeight - 76)),
+      x: touch.clientX - (coords?.x ?? def.x),
+      y: touch.clientY - (coords?.y ?? def.y),
     };
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
@@ -225,9 +241,15 @@ export const FloatingCopilotButton: React.FC<FloatingCopilotButtonProps> = ({
   }
 
   // Determine button positioning styles
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
   const buttonStyle: React.CSSProperties = coords
     ? { left: `${coords.x}px`, top: `${coords.y}px`, right: "auto", bottom: "auto" }
-    : { right: "24px", bottom: "24px" };
+    : {
+        right: isMobile ? "16px" : "24px",
+        bottom: isMobile
+          ? "calc(env(safe-area-inset-bottom, 0px) + 5.25rem)"
+          : "24px",
+      };
 
   return (
     <>

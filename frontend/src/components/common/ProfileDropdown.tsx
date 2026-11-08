@@ -5,7 +5,6 @@ import {
   LogOut,
   Sun,
   Moon,
-  Laptop,
   Coins,
   ChevronRight,
   ShieldCheck,
@@ -125,7 +124,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-sm text-ledger-ink truncate block">
                   {user.display_name || "PennyPilot User"}
                 </span>
@@ -185,7 +184,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
               <span className="text-[10px] text-ledger-inkSubtle capitalize">{theme}</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-1 bg-ledger-surfaceSubtle p-0.5 rounded-lg border border-ledger-borderSubtle">
+            <div className="grid grid-cols-2 gap-1 bg-ledger-surfaceSubtle p-0.5 rounded-lg border border-ledger-borderSubtle">
               <button
                 type="button"
                 onClick={() => setTheme("light")}
@@ -210,19 +209,6 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
               >
                 <Moon className="w-3.5 h-3.5" />
                 <span>Dark</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTheme("system")}
-                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  theme === "system"
-                    ? "bg-ledger-surface text-ledger-teal font-bold shadow-xs border border-ledger-border"
-                    : "text-ledger-inkMuted hover:text-ledger-ink"
-                }`}
-              >
-                <Laptop className="w-3.5 h-3.5" />
-                <span>System</span>
               </button>
             </div>
           </div>

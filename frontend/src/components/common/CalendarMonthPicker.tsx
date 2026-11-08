@@ -123,7 +123,7 @@ export const CalendarMonthPicker: React.FC<CalendarMonthPickerProps> = ({
           role="dialog"
           aria-modal="true"
           aria-label="Month and year picker"
-          className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white dark:bg-[#141F2B] border border-slate-200 dark:border-[#2A3B45] rounded-2xl shadow-2xl z-50 p-3.5 sm:p-4 text-ledger-ink animate-fade-in select-none"
+          className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 top-full mt-2 w-[calc(100vw-2.5rem)] sm:w-80 max-w-[320px] bg-white dark:bg-[#141F2B] border border-slate-200 dark:border-[#2A3B45] rounded-2xl shadow-2xl z-50 p-3.5 sm:p-4 text-ledger-ink animate-fade-in select-none"
         >
           {/* Header Navigation Controls */}
           <div className="flex items-center justify-between border-b border-ledger-borderSubtle pb-2.5 mb-3">

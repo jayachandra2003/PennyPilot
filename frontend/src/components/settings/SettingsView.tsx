@@ -3,7 +3,6 @@ import {
   User as UserIcon,
   Sun,
   Moon,
-  Laptop,
   Coins,
   Shield,
   KeyRound,
@@ -24,6 +23,8 @@ import {
   getAvatarImageUrl,
   forgotPassword,
   updateTutorialStatus,
+  linkGoogleAccount,
+  unlinkGoogleAccount,
 } from "../../lib/api";
 import { useToast } from "../common/Toast";
 import { DeleteAccountModal } from "./DeleteAccountModal";
@@ -137,6 +138,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
+  const [isUnlinkingGoogle, setIsUnlinkingGoogle] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentAvatarSrc = getAvatarImageUrl(user, token);
@@ -147,6 +150,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setSelectedCurrency(user.currency || "INR");
     }
   }, [user]);
+
+  // Handle Google OAuth callback feedback in Settings
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const statusParam = searchParams.get("status");
+    const errorParam = searchParams.get("error");
+
+    if (statusParam === "google_linked") {
+      toast("Google account linked successfully! You can now use Google Sign-In.", "success");
+      setActiveSection("account");
+    } else if (errorParam === "identity_already_linked") {
+      toast("This Google account is already linked to another PennyPilot user profile.", "error");
+      setActiveSection("account");
+    } else if (errorParam === "linking_user_missing" || errorParam === "linking_session_invalidated") {
+      toast("Google account linking timed out or session expired. Please try again.", "error");
+      setActiveSection("account");
+    }
+
+    if (statusParam || errorParam) {
+      if (window.history?.replaceState) {
+        searchParams.delete("status");
+        searchParams.delete("error");
+        const remainingQuery = searchParams.toString();
+        const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : "") + (window.location.hash || "");
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, []);
 
   const getUserInitials = (name?: string, email?: string): string => {
     const raw = (name || email || "PP").trim();
@@ -279,6 +311,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       toast(err.message || "Failed to dispatch reset email.", "error");
     } finally {
       setIsSendingReset(false);
+    }
+  };
+
+  // Link Google Account
+  const handleLinkGoogle = async () => {
+    setIsLinkingGoogle(true);
+    try {
+      const res = await linkGoogleAccount();
+      if (res.authorization_url) {
+        window.location.href = res.authorization_url;
+      }
+    } catch (err: any) {
+      toast(err.message || "Failed to initiate Google account linking.", "error");
+      setIsLinkingGoogle(false);
+    }
+  };
+
+  // Unlink Google Account
+  const handleUnlinkGoogle = async () => {
+    if (!window.confirm("Are you sure you want to disconnect your Google account? You will need to sign in using your email and password.")) {
+      return;
+    }
+    setIsUnlinkingGoogle(true);
+    try {
+      const updatedUser = await unlinkGoogleAccount();
+      updateUser(updatedUser);
+      toast("Google account unlinked successfully.", "success");
+    } catch (err: any) {
+      toast(err.message || "Failed to unlink Google account.", "error");
+    } finally {
+      setIsUnlinkingGoogle(false);
     }
   };
 
@@ -563,7 +626,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Light Theme Card */}
                 <button
                   type="button"
@@ -587,7 +650,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Quiet Ledger (Light)</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Warm light neutral canvas, solid white cards, and crisp slate ink typography.
+                      Warm light neutral canvas, solid white cards, and crisp slate ink typography. (Default)
                     </p>
                   </div>
                 </button>
@@ -616,34 +679,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Midnight Ledger (Dark)</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                       Midnight sapphire-slate glass canvas (#0C131D), frosted translucent cards, and ambient glow accents.
-                    </p>
-                  </div>
-                </button>
-
-                {/* System Theme Card */}
-                <button
-                  type="button"
-                  onClick={() => setTheme("system")}
-                  className={`p-4 sm:p-5 rounded-xl border text-left transition-all relative space-y-3 cursor-pointer ${
-                    theme === "system"
-                      ? "border-teal-600 ring-2 ring-teal-500/20 bg-teal-50/30 dark:bg-teal-950/20"
-                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/40 dark:bg-slate-900/20"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300 flex items-center justify-center">
-                      <Laptop className="w-4 h-4" />
-                    </div>
-                    {theme === "system" && (
-                      <span className="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-xs font-bold">
-                        <Check className="w-3 h-3" />
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">System Preference</h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                      Automatically matches your operating system appearance schedule.
                     </p>
                   </div>
                 </button>
@@ -795,6 +830,111 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Google OAuth Connection Card */}
+              {(() => {
+                const isGoogleLinked = Boolean(user?.linked_providers && user.linked_providers.includes("google"));
+                const hasPassword = Boolean(user?.has_password);
+
+                return (
+                  <div className="p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                              fill="#4285F4"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                              fill="#34A853"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                            />
+                            <path
+                              fill="#EA4335"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                            />
+                          </svg>
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                            Google Sign-In Connection
+                          </h3>
+                          {isGoogleLinked ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400">
+                              <Check className="w-3 h-3" /> Connected
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                              Not Connected
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                          {isGoogleLinked
+                            ? "Your Google account is connected. You can sign in using either your password or 'Continue with Google'."
+                            : "Connect your Google account to enable instant, single-click sign-in with 'Continue with Google'."}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0">
+                        {isGoogleLinked ? (
+                          <button
+                            type="button"
+                            onClick={handleUnlinkGoogle}
+                            disabled={isUnlinkingGoogle || !hasPassword}
+                            title={!hasPassword ? "Please set a password first to prevent account lockout" : "Unlink Google account"}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 hover:bg-rose-100 dark:hover:bg-rose-900/50 disabled:opacity-50 disabled:pointer-events-none transition-colors cursor-pointer"
+                          >
+                            <span>{isUnlinkingGoogle ? "Unlinking..." : "Disconnect Google"}</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleLinkGoogle}
+                            disabled={isLinkingGoogle}
+                            className="btn-primary text-xs px-3.5 py-2 inline-flex items-center gap-2 cursor-pointer shadow-xs"
+                          >
+                            {isLinkingGoogle ? (
+                              <span>Connecting...</span>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    fill="#4285F4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                  />
+                                  <path
+                                    fill="#34A853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                  />
+                                  <path
+                                    fill="#FBBC05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                                  />
+                                  <path
+                                    fill="#EA4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                                  />
+                                </svg>
+                                <span>Link Google Account</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isGoogleLinked && !hasPassword && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50">
+                        Notice: You signed up with Google and haven't set a password. To disconnect Google in the future, first use "Password & Recovery" below to create a password.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Password Recovery Trigger */}
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">

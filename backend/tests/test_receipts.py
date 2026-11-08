@@ -218,3 +218,321 @@ def test_receipt_api_extract_endpoint(isolated_db):
     # Clean up test user directory
     if user_receipt_dir.exists():
         shutil.rmtree(user_receipt_dir, ignore_errors=True)
+
+
+def test_harishanker_indian_receipt_parsing():
+    sample_ocr = """HARISHANKERVEGRESTO
+TRIVENI NAGAR,GOPALPURA,JAIPUR
+Cash Memo
+Bill No.: 1925
+Date:07/11/2026
+T.No.: 5
+W. No. :
+Particulars
+Qty
+Rate
+Amount
+HANDIPANEER
+2
+?200
+400
+SEVTAMATAR
+2
+150
+300
+PLAINRAITA
+2
+<110
+220
+JEERARICE
+2
+<110
+220
+TAVA ROTI BUTTER
+10
+12
+120
+TANDURIROTIBUTTER
+8
+15
+120
+VANILAICECREAM
+5
+40
+R200
+Sub Total :
+1580.00
+CGST@9%On1580.00:
+142.20
+SGST @9% On 1580.00 :
+142.20
+Food Total:
+1864.4
+1864.4
+Total :
+(01:01 PM)
+E.&O.E.
+Thank You
+Visit Again"""
+
+    cats = [
+        {"id": "cat-food", "name": "Dining & Food", "kind": "expense"},
+        {"id": "cat-groceries", "name": "Groceries", "kind": "expense"},
+    ]
+    parsed = parse_receipt_text(sample_ocr, cats)
+
+    assert parsed["merchant"] == "HARISHANKER VEG RESTO"
+    assert parsed["date"] == "2026-11-07"
+    assert parsed["amount_paise"] == 186440  # ₹1,864.40
+    assert parsed["subtotal_paise"] == 158000  # ₹1,580.00
+    assert parsed["tax_paise"] == 28440  # ₹284.40 (CGST 142.20 + SGST 142.20)
+    assert len(parsed["line_items"]) == 7
+    assert parsed["suggested_category_name"] == "Dining & Food"
+    assert parsed["confidence_score"] == 1.0
+
+
+def test_harishanker_exact_uploaded_whatsapp_screenshot():
+    """Test parsing the exact OCR text produced from the mobile WhatsApp receipt screenshot."""
+    raw_ocr_with_chat_chrome = """
+6:33
+35%
+You
+Today,1:51PM
+HARISHANKERVEGRESTO
+TRIVENI NAGAR，GOPALPURA,JAIPUR
+CashMemo-
+Date:07/11/2026
+Bill No.:1925
+T.No.:5
+W.No.:
+Particulars
+Qty
+Rate
+Amount
+HANDIPANEER
+2
+200
+400
+SEVTAMATAR
+2
+150
+300
+PLAINRAITA
+2
+110
+220
+JEERARICE
+2
+110
+220
+TAVAROTIBUTTER
+10
+12
+120
+TANDURIROTIBUTTER
+8
+15
+120
+VANILAICECREAM
+5
+40
+200
+Sub Total:
+1580.00
+CGST@9%On1580.00:
+142.20
+SGST@9%On1580.00:
+142.20
+FoodTotal:
+1864.4
+Total:
+1864.4
+(01:01PM)
+E.&O.E.
+ThankYou
+VisitAgain
+Reply
+    """
+    cats = [{"id": "cat-food", "name": "Dining & Food", "kind": "expense"}]
+    parsed = parse_receipt_text(raw_ocr_with_chat_chrome, cats)
+
+    # Must extract the actual restaurant, NOT 'You' or 'Today'
+    assert parsed["merchant"] == "HARISHANKER VEG RESTO"
+    assert parsed["date"] == "2026-11-07"
+    # Must NOT select 400 (Handi Paneer line-item) or 200 (unit price)
+    assert parsed["amount_paise"] == 186440  # Exactly ₹1,864.40
+    assert parsed["subtotal_paise"] == 158000
+    assert parsed["tax_paise"] == 28440
+    assert len(parsed["line_items"]) == 7
+
+
+def test_receipt_with_separate_grand_total():
+    """Test receipt where grand total is labeled separately from subtotal and taxes."""
+    text = """
+    PVR CINEMAS FORUM MALL
+    Date: 12/11/2026
+    Ticket Qty 2       ₹600.00
+    Popcorn Combo      ₹450.00
+    Sub Total: ₹1,050.00
+    CGST @ 9%: ₹94.50
+    SGST @ 9%: ₹94.50
+    GRAND TOTAL: ₹1,239.00
+    Payment: Credit Card
+    """
+    cats = [{"id": "cat-ent", "name": "Entertainment", "kind": "expense"}]
+    parsed = parse_receipt_text(text, cats)
+
+    assert parsed["merchant"] == "PVR CINEMAS FORUM MALL"
+    assert parsed["amount_paise"] == 123900  # ₹1,239.00
+    assert parsed["subtotal_paise"] == 105000
+    assert parsed["tax_paise"] == 18900
+    # Must not pick subtotal 105000 or item 60000 or 45000
+    assert parsed["amount_paise"] != 105000
+    assert parsed["amount_paise"] != 60000
+
+
+def test_receipt_without_tax():
+    """Test receipt with multiple items and no tax lines."""
+    text = """
+    LOCAL KIRANA STORE
+    Date: 02/11/2026
+    Milk 1L            ₹60.00
+    Eggs 12pk          ₹90.00
+    Bread              ₹45.00
+    Total Amount: ₹195.00
+    """
+    cats = [{"id": "cat-groc", "name": "Groceries", "kind": "expense"}]
+    parsed = parse_receipt_text(text, cats)
+
+    assert parsed["merchant"] == "LOCAL KIRANA STORE"
+    assert parsed["amount_paise"] == 19500
+    assert parsed["tax_paise"] is None
+
+
+def test_receipt_multiple_item_prices_never_picks_line_item():
+    """Ensure no individual line item (even large items like ₹400, ₹500, ₹800) is chosen as total."""
+    text = """
+    FASHION RETAIL STORE
+    Date: 04/11/2026
+    Casual Shirt        ₹800.00
+    Jeans               ₹1200.00
+    Socks               ₹150.00
+    Sub Total: ₹2150.00
+    Amount Payable: ₹2150.00
+    """
+    cats = [{"id": "cat-shop", "name": "Shopping", "kind": "expense"}]
+    parsed = parse_receipt_text(text, cats)
+
+    assert parsed["amount_paise"] == 215000
+    assert parsed["amount_paise"] not in [80000, 120000, 15000]
+
+
+def test_receipt_poor_quality_and_ambiguous_totals():
+    """Ensure garbled/unclear receipt flags manual review and low confidence."""
+    garbled_text = """
+    XYZ??? ???
+    --- --- ---
+    ??? 45???
+    ---
+    """
+    parsed = parse_receipt_text(garbled_text, [])
+    assert parsed["confidence_score"] < 0.6
+    assert len(parsed["warnings"]) > 0
+    assert "manual" in parsed["warnings"][0].lower() or "verify" in parsed["warnings"][0].lower()
+
+
+def test_brahmins_thatte_idli_receipt_extraction():
+    """
+    Verify complete extraction of multi-column thermal receipt: Brahmins Thatte Idli.
+    Tests: 2-digit year (09/11/26 -> 2026-11-09), wrapped item description,
+    jammed rate/amount decomposition (5 @ 95 = 475.00), round off (-0.03), and grand total (550.00).
+    """
+    raw_lines = """
+    Brahmins Thatte Idli-
+    Basaveshwar nagar
+    #19,Karania Chambers,3RD Block
+    Basaveshwaranagar.Bengaluru-79
+    GST-29AAQFP6766L1Z5
+    Name:
+    Date:09/11/26  Dine In: BTI
+    07:57
+    Cashier:biller  Bill No.: 27
+    Token No.: 27
+    Item  Qty. PriceAmount
+    Ghee Podi Thatte  1  75  75.00
+    Idli (1Pcs)
+    Ghee Podi Masala 5  95475.00
+    Dosa
+    Total Qty: 6  Sub Total  550.00
+    Round off  -0.03
+    Grand Total  550.00
+    FSSAI LicNo.11219332000580
+    Thank You, Visit Again.
+    """
+    cats = [{"id": "cat-food", "name": "Dining & Food", "kind": "expense"}]
+    parsed = parse_receipt_text(raw_lines, cats)
+
+    assert parsed["merchant"] == "Brahmins Thatte Idli - Basaveshwar Nagar"
+    assert parsed["date"] == "2026-11-09"
+    assert parsed["subtotal_paise"] == 55000
+    assert parsed["round_off_paise"] == -3
+    assert parsed["amount_paise"] == 55000  # Grand Total
+
+    # Check line items
+    assert len(parsed["line_items"]) == 2
+    item1 = parsed["line_items"][0]
+    assert "Idli" in item1["name"]
+    assert item1["quantity"] == 1
+    assert item1["amount_paise"] == 7500
+    assert item1.get("unit_price_paise") == 7500
+
+    item2 = parsed["line_items"][1]
+    assert "Dosa" in item2["name"]
+    assert item2["quantity"] == 5
+    assert item2["amount_paise"] == 47500
+    assert item2.get("unit_price_paise") == 9500
+
+
+def test_harishanker_veg_resto_receipt_extraction():
+    """
+    Verify complete extraction of Harishanker Veg Resto cash memo:
+    Tests: multi-item table, subtotal (1,580.00), CGST (142.20) + SGST (142.20),
+    final food total (1,864.40), and rejection of line items (e.g. 400 Handi Paneer).
+    """
+    raw_lines = """
+    HARISHANKERVEGRESTO
+    TRIVENI NAGAR, GOPALPURA, JAIPUR
+    Cash Memo
+    Date: 07/11/2026  Bill No.: 1925
+    T.No.: 5  W.No.:
+    Particulars  Qty  Rate  Amount
+    HANDIPANEER  2  200  400
+    SEVTAMATAR  2  150  300
+    PLAINRAITA  2  110  220
+    JEERARICE  2  110  220
+    TAVAROTIBUTTER  10  12  120
+    TANDURIROTIBUTTER  8  15  120
+    VANILAICECREAM  5  40  200
+    Sub Total:  1580.00
+    CGST@9%On1580.00:  142.20
+    SGST@9%On1580.00:  142.20
+    FoodTotal:  1864.4
+    Total:  1864.4
+    (01:01PM)
+    E.&O.E.  ThankYou  VisitAgain
+    """
+    cats = [{"id": "cat-food", "name": "Dining & Food", "kind": "expense"}]
+    parsed = parse_receipt_text(raw_lines, cats)
+
+    assert "HARISHANKER" in parsed["merchant"]
+    assert parsed["date"] == "2026-11-07"
+    assert parsed["subtotal_paise"] == 158000
+    assert parsed["tax_paise"] == 28440
+    assert parsed["amount_paise"] == 186440  # Final total ₹1,864.40 (NEVER ₹400 or ₹200)
+
+    # Confirm Handi Paneer 400 is in line items, NOT the total
+    assert len(parsed["line_items"]) == 7
+    handi = next(it for it in parsed["line_items"] if "HANDIPANEER" in it["name"])
+    assert handi["amount_paise"] == 40000
+    assert parsed["amount_paise"] != 40000
+
