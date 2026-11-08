@@ -234,7 +234,8 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5:3b"
 
-    # Storage Configuration (Local vs Cloudflare R2)
+    # Storage Configuration (Local / Cloudflare R2 / Supabase S3-compatible)
+    # STORAGE_BACKEND: "local" (default) | "r2" (Cloudflare R2) | "supabase" (Supabase Storage)
     STORAGE_BACKEND: str = "local"
     R2_ACCOUNT_ID: str = ""
     R2_ACCESS_KEY_ID: str = ""
@@ -242,6 +243,11 @@ class Settings(BaseSettings):
     R2_BUCKET_NAME: str = "pennypilot-storage"
     R2_ENDPOINT_URL: str = ""
     R2_PUBLIC_URL: str = ""
+    # S3 region for the storage provider.
+    # Cloudflare R2: leave as "auto" (default — R2 accepts this across all regions).
+    # Supabase Storage: set to your project's actual region (e.g. "ap-southeast-1",
+    # "us-east-1"). Using "auto" with Supabase causes SigV4 signing failures.
+    R2_REGION: str = "auto"
 
     # Profile & Receipt Storage (Local Path Fallback)
     AVATAR_UPLOAD_DIR: Path = PROJECT_ROOT / "uploads" / "avatars"

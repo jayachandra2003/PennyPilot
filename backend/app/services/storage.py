@@ -2,7 +2,14 @@
 PennyPilot — Unified Storage Provider Abstraction.
 Supports:
 1. LocalStorageProvider: Zero-configuration local disk / /tmp storage for development.
-2. R2StorageProvider: Cloudflare R2 (S3-compatible) zero-cost persistent object storage for production.
+2. R2StorageProvider: Generic S3-compatible persistent object storage.
+   - Cloudflare R2:    STORAGE_BACKEND=r2,       R2_ACCOUNT_ID (endpoint auto-derived),
+                       R2_REGION defaults to "auto".
+   - Supabase Storage: STORAGE_BACKEND=supabase,  R2_ENDPOINT_URL set to Supabase S3 endpoint,
+                       R2_REGION set to the project's actual region (e.g. "ap-southeast-1").
+
+Credentials (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) are loaded exclusively from
+environment variables — never from source code or committed files.
 """
 import io
 import mimetypes
@@ -113,7 +120,14 @@ class LocalStorageProvider(StorageProvider):
 
 
 class R2StorageProvider(StorageProvider):
-    """Cloudflare R2 (S3-compatible) persistent object storage provider."""
+    """S3-compatible persistent object storage provider.
+
+    Supports Cloudflare R2 (STORAGE_BACKEND="r2") and Supabase Storage
+    (STORAGE_BACKEND="supabase") with identical S3 API behaviour.
+    The only configuration difference is the region:
+    - Cloudflare R2  → R2_REGION="auto"  (default)
+    - Supabase S3    → R2_REGION="<project-region>" e.g. "ap-southeast-1"
+    """
 
     def __init__(
         self,
@@ -122,13 +136,19 @@ class R2StorageProvider(StorageProvider):
         secret_access_key: Optional[str] = None,
         bucket_name: Optional[str] = None,
         endpoint_url: Optional[str] = None,
+        region: Optional[str] = None,
         s3_client: Optional[Any] = None,
     ):
         self.account_id = account_id or getattr(settings, "R2_ACCOUNT_ID", "")
         self.access_key_id = access_key_id or getattr(settings, "R2_ACCESS_KEY_ID", "")
         self.secret_access_key = secret_access_key or getattr(settings, "R2_SECRET_ACCESS_KEY", "")
         self.bucket_name = bucket_name or getattr(settings, "R2_BUCKET_NAME", "pennypilot-storage")
-        
+
+        # Region: "auto" for Cloudflare R2 (accepted globally by R2).
+        # For Supabase Storage, must be the project's actual AWS region string
+        # (e.g. "ap-southeast-1", "us-east-1") — Supabase rejects "auto" in SigV4.
+        self.region = region or getattr(settings, "R2_REGION", "auto") or "auto"
+
         # Build endpoint if not explicitly provided
         if endpoint_url:
             self.endpoint_url = endpoint_url
@@ -161,12 +181,14 @@ class R2StorageProvider(StorageProvider):
                 endpoint_url=self.endpoint_url,
                 aws_access_key_id=self.access_key_id,
                 aws_secret_access_key=self.secret_access_key,
-                region_name="auto",
+                region_name=self.region,  # "auto" for R2; project region for Supabase S3
                 config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
             )
             return self._client
         except ImportError:
-            raise ImportError("boto3 is required for Cloudflare R2 storage. Run: pip install boto3")
+            raise ImportError(
+                "boto3 is required for S3-compatible storage. Run: pip install boto3"
+            )
 
     def save_file(self, key: str, data: bytes, content_type: Optional[str] = None) -> str:
         safe_k = sanitize_key(key)
@@ -222,11 +244,18 @@ _storage_instance: Optional[StorageProvider] = None
 
 
 def get_storage_provider() -> StorageProvider:
-    """Return configured StorageProvider singleton based on STORAGE_BACKEND setting."""
+    """Return configured StorageProvider singleton based on STORAGE_BACKEND setting.
+
+    Supported backends:
+    - "local"    : LocalStorageProvider (development / local disk / /tmp fallback)
+    - "r2"       : R2StorageProvider with Cloudflare R2 credentials (R2_REGION="auto")
+    - "supabase" : R2StorageProvider with Supabase S3-compatible credentials
+                   (R2_REGION=<project-region>, R2_ENDPOINT_URL=<supabase-s3-endpoint>)
+    """
     global _storage_instance
     if _storage_instance is None:
         backend = getattr(settings, "STORAGE_BACKEND", "local").strip().lower()
-        if backend == "r2":
+        if backend in ("r2", "supabase"):
             _storage_instance = R2StorageProvider()
         else:
             _storage_instance = LocalStorageProvider()
