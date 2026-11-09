@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* Top Institutional Top Bar (Desktop & Mobile Header) - Fixed on scroll, translucent frosted background (~92% opacity) */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/92 dark:bg-[#101820]/92 backdrop-blur-md border-b border-slate-200/80 dark:border-[#2A3B45]/80 px-4 sm:px-6 md:px-8 xl:px-10 2xl:px-12 py-3.5 sm:py-4 min-h-[74px] sm:min-h-[78px] flex items-center shadow-xs transition-colors">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/92 dark:bg-[#101820]/92 backdrop-blur-md border-b border-slate-200/80 dark:border-[#2A3B45]/80 px-4 sm:px-6 md:px-8 xl:px-10 2xl:px-12 py-2.5 sm:py-3 min-h-[66px] sm:min-h-[70px] flex items-center shadow-xs transition-colors">
         <div className="max-w-ledger w-full mx-auto flex items-center justify-between gap-3 sm:gap-4 min-w-0">
           {/* GROUP 1: Official Logo & PennyPilot Branding (Enlarged) */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 select-none">
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* GROUP 2: Primary Navigation (Dashboard, Transactions, Budgets, Analytics, Insights, Categories, AI Copilot) */}
           <nav
-            className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0"
+            className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0"
             aria-label="Primary Navigation"
           >
             {desktopNavItems.map((item) => {
@@ -106,13 +106,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={item.id}
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => onSelectTab(item.id)}
-                  className={`flex items-center gap-1.5 xl:gap-2 px-2.5 xl:px-3 py-2 rounded-xl text-xs xl:text-sm font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs xl:text-[13px] font-medium transition-all ${
                     isActive
-                      ? "bg-slate-900 text-white shadow-[0_2px_10px_rgba(15,23,42,0.25)] dark:bg-teal-500/15 dark:text-teal-300 dark:border dark:border-teal-400/30 dark:shadow-[0_0_14px_rgba(45,212,191,0.25)] font-semibold"
+                      ? "bg-slate-900 text-white shadow-xs dark:bg-teal-500/15 dark:text-teal-300 dark:border dark:border-teal-400/30 dark:shadow-[0_0_12px_rgba(45,212,191,0.2)] font-semibold"
                       : "text-slate-600 dark:text-ledger-inkMuted hover:text-slate-900 dark:hover:text-ledger-ink hover:bg-slate-100/70 dark:hover:bg-white/5"
                   } focus-ring whitespace-nowrap cursor-pointer`}
                 >
-                  <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <Icon className="w-3.5 h-3.5 xl:w-[15px] xl:h-[15px] shrink-0" aria-hidden="true" />
                   <span>{item.label}</span>
                 </button>
               );

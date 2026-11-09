@@ -39,6 +39,11 @@ import { PrivacyPolicy } from "./components/legal/PrivacyPolicy";
 import { TermsOfService } from "./components/legal/TermsOfService";
 import { SecurityStandards } from "./components/legal/SecurityStandards";
 import { SettingsView } from "./components/settings/SettingsView";
+import { LandingPage } from "./components/landing/LandingPage";
+import { SignInPage } from "./components/auth/SignInPage";
+import { CreateAccountPage } from "./components/auth/CreateAccountPage";
+import { PennyPilotLogo } from "./components/common/PennyPilotLogo";
+import { ContactModal } from "./components/common/ContactModal";
 import type { CategoryItem } from "./lib/api";
 import {
   fetchAnomalies,
@@ -66,7 +71,19 @@ function MainDashboard() {
   const isPrivacyRoute = typeof window !== "undefined" && window.location.pathname.includes("/privacy");
   const isTermsRoute = typeof window !== "undefined" && window.location.pathname.includes("/terms");
   const isSecurityRoute = typeof window !== "undefined" && window.location.pathname.includes("/security");
-  const initialTab = isPrivacyRoute ? "privacy" : isTermsRoute ? "terms" : isSecurityRoute ? "security" : "dashboard";
+  const isLoginRoute = typeof window !== "undefined" && (window.location.pathname.includes("/login") || window.location.pathname.includes("/signin"));
+  const isSignupRoute = typeof window !== "undefined" && (window.location.pathname.includes("/signup") || window.location.pathname.includes("/register"));
+  const initialTab = isPrivacyRoute
+    ? "privacy"
+    : isTermsRoute
+    ? "terms"
+    : isSecurityRoute
+    ? "security"
+    : isLoginRoute
+    ? "login"
+    : isSignupRoute
+    ? "signup"
+    : "dashboard";
 
   const [currentTab, setCurrentTab] = useState<string>(initialTab);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
@@ -78,6 +95,7 @@ function MainDashboard() {
   const [isOnboardingWizardOpen, setIsOnboardingWizardOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState<boolean>(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<"profile" | "appearance" | "currency" | "account">("profile");
 
   const handleNavigateTab = (tab: string, section?: string) => {
@@ -94,6 +112,8 @@ function MainDashboard() {
       if (path.includes("/privacy")) setCurrentTab("privacy");
       else if (path.includes("/terms")) setCurrentTab("terms");
       else if (path.includes("/security")) setCurrentTab("security");
+      else if (path.includes("/login") || path.includes("/signin")) setCurrentTab("login");
+      else if (path.includes("/signup") || path.includes("/register")) setCurrentTab("signup");
       else if (path === "/" || path === "") setCurrentTab("dashboard");
     };
     window.addEventListener("popstate", handlePopState);
@@ -107,12 +127,28 @@ function MainDashboard() {
     }
   };
 
-  const handleBackToDashboard = () => {
+  const handleNavigateToLogin = () => {
+    setCurrentTab("login");
+    if (typeof window !== "undefined" && window.history?.pushState) {
+      window.history.pushState({}, "", "/login");
+    }
+  };
+
+  const handleNavigateToSignup = () => {
+    setCurrentTab("signup");
+    if (typeof window !== "undefined" && window.history?.pushState) {
+      window.history.pushState({}, "", "/signup");
+    }
+  };
+
+  const handleNavigateToHome = () => {
     setCurrentTab("dashboard");
     if (typeof window !== "undefined" && window.history?.pushState) {
       window.history.pushState({}, "", "/");
     }
   };
+
+  const handleBackToDashboard = handleNavigateToHome;
 
   // Route detection: password reset vs email verification
   const isResetRoute = typeof window !== "undefined" && window.location.pathname.includes("/reset-password");
@@ -132,7 +168,7 @@ function MainDashboard() {
 
   const handleOpenLoginFromReset = () => {
     handleCloseResetPassword();
-    setIsAuthModalOpen(true);
+    handleNavigateToLogin();
   };
 
   // Email verification route
@@ -151,10 +187,20 @@ function MainDashboard() {
 
   const handleOpenLoginFromVerification = () => {
     handleCloseVerification();
-    setIsAuthModalOpen(true);
+    handleNavigateToLogin();
   };
 
   const { user, isLoading: isAuthLoading } = useAuth();
+
+  // Redirect authenticated users away from login/signup routes to dashboard
+  useEffect(() => {
+    if (user && (currentTab === "login" || currentTab === "signup")) {
+      setCurrentTab("dashboard");
+      if (typeof window !== "undefined" && window.history?.replaceState) {
+        window.history.replaceState({}, document.title, "/");
+      }
+    }
+  }, [user, currentTab]);
 
   // Queries
   const { data: summary, isLoading: isSummaryLoading } = useQuery({
@@ -306,6 +352,140 @@ function MainDashboard() {
     return <NotFound onBackToHome={() => setCurrentTab("dashboard")} />;
   }
 
+  // Initial authentication loading state: clean institutional splash without layout shifts
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 animate-pulse">
+          <PennyPilotLogo variant="symbol" size="lg" />
+          <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Loading PennyPilot...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Unauthenticated user experience: Public Landing Page, Auth Pages & Legal documents
+  if (!user) {
+    if (currentTab === "login") {
+      return (
+        <>
+          <SignInPage
+            onNavigateToSignup={handleNavigateToSignup}
+            onNavigateToHome={handleNavigateToHome}
+            onOpenLegal={handleOpenLegal}
+          />
+          <ResetPasswordModal
+            isOpen={isResetModalOpen}
+            token={resetToken}
+            onClose={handleCloseResetPassword}
+            onOpenLogin={handleNavigateToLogin}
+            onOpenForgotPassword={() => {
+              handleCloseResetPassword();
+              handleNavigateToLogin();
+            }}
+          />
+          <EmailVerificationModal
+            isOpen={isVerificationModalOpen}
+            token={verifyToken}
+            statusParam={verifyStatus}
+            emailParam={verifyEmailParam}
+            onClose={handleCloseVerification}
+            onOpenLogin={handleNavigateToLogin}
+          />
+        </>
+      );
+    }
+
+    if (currentTab === "signup") {
+      return (
+        <>
+          <CreateAccountPage
+            onNavigateToLogin={handleNavigateToLogin}
+            onNavigateToHome={handleNavigateToHome}
+            onOpenLegal={handleOpenLegal}
+          />
+          <ResetPasswordModal
+            isOpen={isResetModalOpen}
+            token={resetToken}
+            onClose={handleCloseResetPassword}
+            onOpenLogin={handleNavigateToLogin}
+            onOpenForgotPassword={() => {
+              handleCloseResetPassword();
+              handleNavigateToLogin();
+            }}
+          />
+          <EmailVerificationModal
+            isOpen={isVerificationModalOpen}
+            token={verifyToken}
+            statusParam={verifyStatus}
+            emailParam={verifyEmailParam}
+            onClose={handleCloseVerification}
+            onOpenLogin={handleNavigateToLogin}
+          />
+        </>
+      );
+    }
+
+    if (currentTab === "privacy") {
+      return (
+        <div className="min-h-screen bg-[#F8FAF9] text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
+          <PrivacyPolicy onSelectDoc={handleOpenLegal} onBackToDashboard={handleNavigateToHome} />
+        </div>
+      );
+    }
+    if (currentTab === "terms") {
+      return (
+        <div className="min-h-screen bg-[#F8FAF9] text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
+          <TermsOfService onSelectDoc={handleOpenLegal} onBackToDashboard={handleNavigateToHome} />
+        </div>
+      );
+    }
+    if (currentTab === "security") {
+      return (
+        <div className="min-h-screen bg-[#F8FAF9] text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
+          <SecurityStandards onSelectDoc={handleOpenLegal} onBackToDashboard={handleNavigateToHome} />
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <LandingPage
+          onOpenLogin={handleNavigateToLogin}
+          onOpenRegister={handleNavigateToSignup}
+          onOpenLegal={handleOpenLegal}
+          onOpenContact={() => setIsContactModalOpen(true)}
+        />
+
+        {/* Contact Modal */}
+        <ContactModal
+          isOpen={isContactModalOpen}
+          onClose={() => setIsContactModalOpen(false)}
+        />
+
+        <ResetPasswordModal
+          isOpen={isResetModalOpen}
+          token={resetToken}
+          onClose={handleCloseResetPassword}
+          onOpenLogin={handleNavigateToLogin}
+          onOpenForgotPassword={() => {
+            handleCloseResetPassword();
+            handleNavigateToLogin();
+          }}
+        />
+
+        <EmailVerificationModal
+          isOpen={isVerificationModalOpen}
+          token={verifyToken}
+          statusParam={verifyStatus}
+          emailParam={verifyEmailParam}
+          onClose={handleCloseVerification}
+          onOpenLogin={handleNavigateToLogin}
+        />
+      </>
+    );
+  }
+
   // Filter transactions for currently selected month for the hero chart
   const monthPrefix = `${selectedYear}-${selectedMonth.toString().padStart(2, "0")}`;
   const monthTxs = transactions.filter((t) => t.occurred_on.startsWith(monthPrefix));
@@ -333,14 +513,14 @@ function MainDashboard() {
         currentTab={currentTab}
         onSelectTab={handleTabSelect}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={handleNavigateToLogin}
         onOpenLegal={handleOpenLegal}
       />
 
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-[86px] sm:pt-[92px] md:pt-[98px] pb-28 lg:pb-12 space-y-6 sm:space-y-7 md:space-y-8 focus:outline-none min-w-0 relative z-10"
+        className="flex-1 max-w-ledger w-full mx-auto px-4 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-[78px] sm:pt-[84px] md:pt-[88px] pb-28 lg:pb-12 space-y-6 sm:space-y-7 md:space-y-8 focus:outline-none min-w-0 relative z-10"
         aria-label="Main financial ledger content"
       >
         {/* PWA Install Promotion Banner */}
@@ -626,9 +806,14 @@ function MainDashboard() {
 
       {/* Authentication & Registration Modal */}
       <AuthModal
-        isOpen={!user && !isAuthLoading ? true : isAuthModalOpen}
+        isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        isForced={!user}
+      />
+
+      {/* Contact Modal */}
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
       />
 
       {/* Production Footer - Solid white in Light mode, Solid Midnight Ledger in Dark mode */}
@@ -658,6 +843,14 @@ function MainDashboard() {
               className="text-slate-600 dark:text-[#A8BAC4] hover:text-ledger-teal dark:hover:text-ledger-teal transition-colors focus-ring rounded py-0.5 cursor-pointer font-medium"
             >
               Security Standards
+            </button>
+            <span aria-hidden="true" className="text-slate-300 dark:text-[#2A3B45]">•</span>
+            <button
+              type="button"
+              onClick={() => setIsContactModalOpen(true)}
+              className="text-slate-600 dark:text-[#A8BAC4] hover:text-ledger-teal dark:hover:text-ledger-teal transition-colors focus-ring rounded py-0.5 cursor-pointer font-medium"
+            >
+              Contact
             </button>
           </nav>
         </div>
