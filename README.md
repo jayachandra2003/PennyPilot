@@ -5,8 +5,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Enabled-5A0FC8?logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
+[![Tests](https://img.shields.io/badge/Tests-286%20Passed-success)](https://github.com/jayachandra2003/PennyPilot)
 
-> An intelligent, privacy-first personal finance platform combining deterministic accounting, grounded AI intelligence, and multi-format receipt digitization.
+> An intelligent, privacy-first personal finance platform combining deterministic integer accounting, grounded AI intelligence, and multi-format receipt digitization.
 
 ---
 
@@ -21,7 +22,7 @@ Built on the **"Quiet Ledger"** design philosophy, PennyPilot emphasizes typogra
 ## Key Features
 
 ### 1. Deterministic Financial Ledger
-- **Integer Paise Arithmetic:** All monetary values are calculated and stored strictly as integer paise (`₹1.00 = 100 paise`), avoiding IEEE 754 floating-point rounding discrepancies.
+- **Integer Paise Arithmetic:** All monetary values are calculated and stored strictly as integer paise (`₹1.00 = 100 paise`), eliminating IEEE 754 floating-point rounding discrepancies.
 - **Granular Category Taxonomy:** Custom color-coded categories, subcategory tags, and customizable spending limits.
 - **Bi-directional Ledger:** Real-time balance calculations, multi-parameter transaction filtering, and period-over-period aggregate reporting.
 
@@ -52,30 +53,42 @@ Built on the **"Quiet Ledger"** design philosophy, PennyPilot emphasizes typogra
 
 ## Application Showcase
 
+### Public Landing Page
+A polished public entry point featuring ambient lighting, an interactive receipt scanning demo, feature highlights, and seamless onboarding pathways.
+
+![PennyPilot Landing Page](docs/images/landing_page.png)
+
 ### Executive Financial Dashboard
 The central command center provides high-density net worth indicators, dynamic monthly trend bars, and real-time category distribution.
 
-![PennyPilot Executive Dashboard](screenshots/redesigned_dashboard_light.png)
+![PennyPilot Executive Dashboard](docs/images/dashboard.png)
 
 ### Budget Velocity & Spending Pace
 Visual progress bars and burn-rate metrics contrast calendar day progress against actual consumption to prevent month-end overruns.
 
-![PennyPilot Budget Intelligence](screenshots/stage4b_budgets_desktop.png)
+![PennyPilot Budget Intelligence](docs/images/budgets.png)
 
 ### Multi-Format Receipt Extraction
 The automated document pipeline extracts merchant metadata, date, line items, and Indian GST breakdowns into an editable ledger draft.
 
-![PennyPilot Receipt Scanner](screenshots/receipt_review_390.png)
+![PennyPilot Receipt Scanner](docs/images/receipt_scanning.png)
 
 ### Cash Flow & Category Analytics
 Multi-axis breakdown of spending patterns, monthly burn rates, and discretionary expense distributions.
 
-![PennyPilot Analytics](screenshots/glass_light_analytics.png)
+![PennyPilot Analytics](docs/images/analytics.png)
+
+### Dedicated Full-Page Authentication
+Dedicated Sign In and Create Account interfaces with live password complexity indicators, remember-me persistence, and Google OAuth integration.
+
+| Sign In (`/login`) | Create Account (`/signup`) |
+| :---: | :---: |
+| ![Sign In Page](docs/images/auth_signin.png) | ![Create Account Page](docs/images/auth_signup.png) |
 
 ### Responsive Mobile Experience
 Full desktop capabilities encapsulated in an ergonomic mobile layout with bottom-sheet modals, tactile cards, and quick-action triggers.
 
-![PennyPilot Mobile Interface](screenshots/mobile_390_aligned.png)
+![PennyPilot Mobile Interface](docs/images/mobile_interface.png)
 
 ---
 
@@ -93,7 +106,7 @@ Full desktop capabilities encapsulated in an ergonomic mobile layout with bottom
 │ Authentication    │ Google OAuth 2.0 (PKCE OpenID Connect), Bcrypt, PyJWT, First-Party │
 │                   │ SameSite Session Cookies                                           │
 │ AI & Vision       │ Google Gemini 3.8 Flash (Multimodal), RapidOCR Engine              │
-│ Quality & Testing │ Pytest (automated unit, domain, API & security test suite), Vitest │
+│ Quality & Testing │ Pytest (171 tests), Vitest (115 tests), Full TypeScript Validation │
 └───────────────────┴────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -112,7 +125,7 @@ flowchart TD
     end
 
     subgraph Gateway ["API & Authentication Gateway"]
-        FastAPI["FastAPI Serverless Application"]
+        FastAPI["FastAPI Application"]
         AuthMiddleware["Session & CSRF Verification"]
         RateLimiter["IP & Token Rate Limiting"]
     end
@@ -147,41 +160,135 @@ flowchart TD
 
 ---
 
-## Repository Structure
+## Getting Started & Local Development
 
+### Prerequisites
+- **Python:** 3.10 or higher
+- **Node.js:** 18.0 or higher (`npm` included)
+- **Git**
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/jayachandra2003/PennyPilot.git
+cd PennyPilot
 ```
-PennyPilot/
-├── api/                      # Serverless application entry points
-│   ├── index.py              # FastAPI serverless handler
-│   └── requirements.txt      # Serverless runtime dependency manifest
-├── backend/                  # Core Python Application
-│   ├── app/
-│   │   ├── api/v1/           # REST endpoints (auth, transactions, budgets, receipts)
-│   │   ├── core/             # Configuration, cryptographic security, error handling
-│   │   ├── db/               # SQLAlchemy database session & engine factory
-│   │   ├── domain/           # Pure financial arithmetic, anomaly detection & parser
-│   │   ├── models/           # SQLAlchemy ORM models
-│   │   ├── schemas/          # Pydantic v2 validation models
-│   │   └── services/         # Storage providers, AI clients, OAuth & email service
-│   ├── tests/                # Automated Pytest suite (unit, domain, integration)
-│   └── alembic/              # Database migration versions
-├── frontend/                 # React 19 Client Application
-│   ├── src/
-│   │   ├── components/       # UI components (dashboard, ledger, budgets, copilot)
-│   │   ├── context/          # Theme, notification, and auth state providers
-│   │   ├── hooks/            # Data-fetching hooks (TanStack Query)
-│   │   └── lib/              # API client, currency formatters, report generators
-│   ├── public/               # PWA manifests, icons, static assets
-│   └── vite.config.ts        # Vite build & PWA configuration
-├── docs/                     # Architectural & security specifications
-│   ├── ARCHITECTURE.md       # Detailed system design
-│   ├── DESIGN_SYSTEM.md      # Quiet Ledger tokens & design specification
-│   └── SECURITY.md           # Security architecture & threat modeling
-├── screenshots/              # Polished application interface captures
-├── vercel.json               # Serverless routing & build specification
-├── requirements.txt          # Root Python dependency manifest
-└── README.md
+
+### 2. Backend Setup
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create and activate virtual environment
+python -m venv .venv
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# On Linux / macOS:
+# source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run database migrations (creates local SQLite database)
+alembic upgrade head
+
+# Start development server on port 8000
+uvicorn app.main:app --reload --port 8000
 ```
+Backend API interactive documentation is available at `http://localhost:8000/docs`.
+
+### 3. Frontend Setup
+```bash
+# Open a new terminal in the repository root
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start Vite development server on port 5173
+npm run dev
+```
+Open `http://localhost:5173` in your browser.
+
+### Windows Quick Startup Batch Scripts
+For Windows environments, the repository includes three one-click startup scripts in the root directory:
+- `1_Start_Backend.bat` — Activates the virtual environment and starts Uvicorn.
+- `2_Start_Frontend.bat` — Installs dependencies (if missing) and starts Vite.
+- `3_Start_Cloudflare.bat` — Optionally exposes the application via a local Cloudflare quick tunnel for remote mobile testing.
+
+---
+
+## Environment Variables Configuration
+
+Copy `.env.example` to `.env` in the root directory and configure the variables as needed:
+
+```env
+# ==============================================================================
+# PENNYPILOT ENVIRONMENT CONFIGURATION (.env)
+# ==============================================================================
+
+# Core Application
+ENVIRONMENT=development
+DEBUG=true
+SECRET_KEY=generate_a_secure_64_character_hex_key_for_production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# Database
+# Local SQLite (default):
+DATABASE_URL=sqlite:///./penny_pilot.db
+# Cloud PostgreSQL (Optional):
+# DATABASE_URL=postgresql://user:password@hostname:5432/dbname?sslmode=require
+
+# URLs & CORS
+FRONTEND_URL=http://localhost:5173
+BACKEND_BASE_URL=http://localhost:8000
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# AI & OCR Engine (Optional - 3-Tier Fallback Chain)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_VISION_MODEL=gemini-3.8-flash
+GEMINI_TEXT_MODEL=gemini-3.8-flash
+
+# Brevo SMTP Configuration (Email Verification & Password Reset)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USERNAME=your_smtp_login_here
+SMTP_PASSWORD=your_smtp_password_here
+SMTP_FROM_EMAIL=your_verified_sender_email@example.com
+SMTP_FROM_NAME=PennyPilot
+SMTP_USE_TLS=true
+
+# Google OAuth 2.0 (Optional)
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/auth/google/callback
+```
+
+---
+
+## Verification & Automated Test Suites
+
+PennyPilot enforces comprehensive automated testing across both client and server:
+
+### Run Backend Tests (171 Tests)
+```bash
+# From repository root or backend/
+pytest backend/tests
+```
+Covers arithmetic precision, tax disaggregation, anomaly detection, session security, CSRF protection, and account lifecycle.
+
+### Run Frontend Tests (115 Tests)
+```bash
+# From repository root
+npm test --prefix frontend -- --run
+```
+Covers form validation, password strength requirements, offline PWA hooks, report generation, and UI state logic.
+
+### Verify Production Build
+```bash
+npm run build --prefix frontend
+```
+Executes TypeScript compilation (`tsc -b`) and Vite production bundle optimization.
 
 ---
 
@@ -189,20 +296,11 @@ PennyPilot/
 
 PennyPilot implements strict security-by-design standards across all execution paths:
 
-- **Server-Side Multi-Tenant Isolation:** Every database query filters by `user_id` enforced server-side. Client-side state is treated as untrusted.
-- **Strict SameSite First-Party Cookies:** Authentication sessions, CSRF protections, and OAuth PKCE verifiers use `SameSite=Lax`, `Secure=True`, and `HttpOnly` cookie flags to eliminate token theft via Cross-Site Scripting (XSS).
-- **Cryptographic Password Hashing:** User passwords are encrypted using Bcrypt with per-user cryptographic salts and minimum complexity enforcement.
+- **Server-Side Multi-Tenant Isolation:** Every database query strictly filters by `user_id` enforced server-side. Client-side state is treated as untrusted.
+- **Strict SameSite First-Party Cookies:** Authentication sessions, CSRF protections, and OAuth PKCE verifiers use `SameSite=Lax`, `Secure=True` (in production/HTTPS), and `HttpOnly` flags to eliminate token theft via Cross-Site Scripting (XSS).
+- **Cryptographic Password Hashing:** User passwords are encrypted using `bcrypt` with per-user cryptographic salts and minimum complexity enforcement.
 - **Grounded FactBundle Architecture:** AI endpoints are decoupled from numerical calculations. All arithmetic, aggregations, and burn-rate metrics occur in pure Python integer paise, generating immutable `FactBundle` data structures that are cross-referenced with generated narrative output before presentation.
 - **Authenticated File Access:** Receipt files are accessed through authenticated backend streaming endpoints (`/api/v1/receipts/{id}/download`), enforcing user session validation rather than exposing direct public storage URLs.
-
----
-
-## Roadmap
-
-- [ ] **Automated Bank Feed Integration:** Account Aggregator (AA) framework integration for consent-based Indian financial institution statement sync.
-- [ ] **Predictive Cash Flow Modeling:** Machine learning projections based on historical income intervals and seasonal discretionary expenditure.
-- [ ] **WebAuthn / Passkey Support:** Passwordless hardware key and biometric authentication.
-- [ ] **Multi-Currency Portfolio Ledger:** Automated exchange rate conversion supporting USD, EUR, and GBP with real-time currency indexing.
 
 ---
 
