@@ -200,8 +200,7 @@ def extract_raw_text(file_bytes: bytes, ext: str) -> Tuple[str, str, List[str]]:
                         ]
                     }]
                 }
-                vision_model = getattr(settings, "GEMINI_VISION_MODEL", "gemini-3.8-flash")
-                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{vision_model}:generateContent?key={settings.GEMINI_API_KEY}"
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
                 resp = requests.post(gemini_url, json=payload, timeout=12)
                 if resp.status_code == 200:
                     data = resp.json()

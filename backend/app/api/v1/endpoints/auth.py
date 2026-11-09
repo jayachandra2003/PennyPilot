@@ -33,7 +33,6 @@ from app.schemas.user import (
     VerifyEmailRequest,
 )
 from app.services.email_service import is_smtp_configured, send_verification_email
-from app.services.storage import avatar_storage_key, get_storage_provider
 from app.services.google_oauth import (
     OAuthValidationError,
     build_google_authorization_url,
@@ -793,11 +792,8 @@ async def upload_user_avatar(
 
     ext, _ = validate_image_bytes(content)
 
-    storage = get_storage_provider()
-
     if current_user.avatar_url:
         old_filename = Path(current_user.avatar_url).name
-        storage.delete_file(avatar_storage_key(current_user.id, old_filename))
         old_file = settings.AVATAR_UPLOAD_DIR / old_filename
         if old_file.is_file():
             try:
@@ -806,17 +802,9 @@ async def upload_user_avatar(
                 pass
 
     safe_filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
-    media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else ("image/png" if ext == ".png" else "image/webp")
-    storage.save_file(avatar_storage_key(current_user.id, safe_filename), content, media_type)
-
-    # Optional local fallback
-    try:
-        settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        target_path = settings.AVATAR_UPLOAD_DIR / safe_filename
-        with open(target_path, "wb") as f:
-            f.write(content)
-    except Exception:
-        pass
+    target_path = settings.AVATAR_UPLOAD_DIR / safe_filename
+    with open(target_path, "wb") as f:
+        f.write(content)
 
     current_user.avatar_url = safe_filename
     current_user.updated_at = datetime.now(timezone.utc)
@@ -837,29 +825,17 @@ def get_my_avatar(
         raise NotFoundException(message="User has not set a profile picture", code="AVATAR_NOT_SET")
 
     filename = Path(current_user.avatar_url).name
-    storage = get_storage_provider()
-    key = avatar_storage_key(current_user.id, filename)
-    file_res = storage.get_file(key)
-    if file_res is not None:
-        data, media_type = file_res
-        return Response(
-            content=data,
-            media_type=media_type,
-            headers={"Cache-Control": "private, max-age=3600"},
-        )
-
-    # Local fallback
     target_path = settings.AVATAR_UPLOAD_DIR / filename
-    if target_path.is_file():
-        ext = target_path.suffix.lower()
-        media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else ("image/png" if ext == ".png" else "image/webp")
-        return FileResponse(
-            path=target_path,
-            media_type=media_type,
-            headers={"Cache-Control": "private, max-age=3600"},
-        )
+    if not target_path.is_file():
+        raise NotFoundException(message="Avatar file not found on disk", code="AVATAR_NOT_FOUND")
 
-    raise NotFoundException(message="Avatar file not found on disk", code="AVATAR_NOT_FOUND")
+    ext = target_path.suffix.lower()
+    media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else ("image/png" if ext == ".png" else "image/webp")
+    return FileResponse(
+        path=target_path,
+        media_type=media_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 @router.get("/users/{user_id}/avatar")
@@ -882,12 +858,9 @@ def delete_user_avatar(
     current_user: User = Depends(get_current_user),
     _csrf: bool = Depends(verify_csrf),
 ):
-    """Remove user's profile picture and delete image file from persistent storage."""
+    """Remove user's profile picture and delete image file from local storage."""
     if current_user.avatar_url:
         filename = Path(current_user.avatar_url).name
-        storage = get_storage_provider()
-        storage.delete_file(avatar_storage_key(current_user.id, filename))
-
         target_path = settings.AVATAR_UPLOAD_DIR / filename
         if target_path.is_file():
             try:

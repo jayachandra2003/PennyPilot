@@ -106,13 +106,14 @@ def verify_csrf(
         return True
 
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        # 1. Validate Origin header
+        # 1. Validate Origin header using the full allowlist logic (supports *.trycloudflare.com
+        #    and any other patterns registered via settings.is_origin_allowed).
         origin = request.headers.get("origin")
         if origin:
-            allowed = settings.ALLOWED_ORIGINS
-            if isinstance(allowed, str):
-                allowed = [o.strip() for o in allowed.split(",")]
-            if origin not in allowed and not any(origin.rstrip("/") == a.rstrip("/") for a in allowed):
+            origin_clean = origin.strip().rstrip("/")
+            # settings.is_origin_allowed covers: localhost, 127.0.0.1, *.trycloudflare.com,
+            # and every entry in ALLOWED_ORIGINS — so no separate list scan is needed.
+            if not settings.is_origin_allowed(origin_clean):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Untrusted cross-origin request",

@@ -78,6 +78,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
     ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
@@ -162,7 +164,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_EMAIL: str = "jayachandravennam.jc@gmail.com"
     SMTP_FROM_NAME: str = "PennyPilot"
     SMTP_USE_TLS: bool = True
     EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 30
@@ -224,65 +226,19 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production" or is_https or (self.COOKIE_SAMESITE and self.COOKIE_SAMESITE.lower() == "none"):
             self.COOKIE_SECURE = True
 
-        # Production security validation
-        if self.ENVIRONMENT.strip().lower() == 'production':
-            if not self.DATABASE_URL.startswith('postgresql://'):
-                raise ValueError(
-                    'Production requires a PostgreSQL DATABASE_URL. '
-                    'SQLite is not supported in production.'
-                )
-
-            if (
-                not self.SECRET_KEY
-                or len(self.SECRET_KEY) < 64
-                or self.SECRET_KEY == 'dev-secret-key-change-in-production-min-32-chars-required'
-            ):
-                raise ValueError(
-                    'Production requires a secure SECRET_KEY '
-                    'of at least 64 characters.'
-                )
-
         return self
 
     # AI Configuration (3-Tier Fallback Chain)
     GEMINI_API_KEY: str = ""
-    GEMINI_VISION_MODEL: str = "gemini-3.8-flash"
-    GEMINI_TEXT_MODEL: str = "gemini-3.8-flash"
     GROQ_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5:3b"
 
-    # Storage Configuration (Local / Cloudflare R2 / Supabase S3-compatible)
-    # STORAGE_BACKEND: "local" (default) | "r2" (Cloudflare R2) | "supabase" (Supabase Storage)
-    STORAGE_BACKEND: str = "local"
-    R2_ACCOUNT_ID: str = ""
-    R2_ACCESS_KEY_ID: str = ""
-    R2_SECRET_ACCESS_KEY: str = ""
-    R2_BUCKET_NAME: str = "pennypilot-storage"
-    R2_ENDPOINT_URL: str = ""
-    R2_PUBLIC_URL: str = ""
-    # S3 region for the storage provider.
-    # Cloudflare R2: leave as "auto" (default — R2 accepts this across all regions).
-    # Supabase Storage: set to your project's actual region (e.g. "ap-southeast-1",
-    # "us-east-1"). Using "auto" with Supabase causes SigV4 signing failures.
-    R2_REGION: str = "auto"
-
-    # Profile & Receipt Storage (Local Path Fallback)
+    # Profile & Receipt Storage
     AVATAR_UPLOAD_DIR: Path = PROJECT_ROOT / "uploads" / "avatars"
     RECEIPT_UPLOAD_DIR: Path = PROJECT_ROOT / "uploads" / "receipts"
 
 
 settings = Settings()
-try:
-    settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    settings.RECEIPT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-except OSError:
-    # On read-only serverless environments (e.g. Vercel Lambda), fallback to /tmp
-    tmp_uploads = Path("/tmp/uploads")
-    settings.AVATAR_UPLOAD_DIR = tmp_uploads / "avatars"
-    settings.RECEIPT_UPLOAD_DIR = tmp_uploads / "receipts"
-    try:
-        settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        settings.RECEIPT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        pass
+settings.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+settings.RECEIPT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

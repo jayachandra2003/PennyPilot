@@ -84,21 +84,14 @@ class GeminiClient(BaseLLMClient):
         if not self.api_key:
             return None
 
-        text_model = getattr(settings, "GEMINI_TEXT_MODEL", "gemini-3.8-flash")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{text_model}:generateContent?key={self.api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.api_key}"
         parts = [{"text": prompt}]
         if system_prompt:
             parts.insert(0, {"text": f"SYSTEM: {system_prompt}\n\nUSER:"})
 
-        # Gemini 3.8 Flash uses thinkingConfig (low/medium/high) for reasoning depth;
-        # legacy temperature/penalization parameters are ignored or return errors.
         payload = {
             "contents": [{"parts": parts}],
-            "generationConfig": {
-                "thinkingConfig": {
-                    "thinkingLevel": "low"
-                }
-            },
+            "generationConfig": {"temperature": 0.2},
         }
 
         try:

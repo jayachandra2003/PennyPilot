@@ -1,12 +1,14 @@
 """FastAPI application initialization and middleware configuration."""
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.engine.url import make_url
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.errors import (
@@ -19,6 +21,58 @@ from app.core.errors import (
 from app.core.logging import logger, setup_logging
 from app.db.base import Base
 from app.db.session import engine
+
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    """
+    Supplement the static CORSMiddleware with dynamic origin approval for
+    Cloudflare Quick Tunnel URLs (*.trycloudflare.com) and any other origin
+    permitted by settings.is_origin_allowed().
+
+    This middleware runs BEFORE the main CORSMiddleware.  When an OPTIONS
+    preflight arrives from an approved dynamic origin, it short-circuits with
+    a 204 response containing the correct CORS headers.  For regular requests
+    from an approved dynamic origin, it injects Access-Control-Allow-* headers
+    into the response so the browser does not reject it.
+    """
+
+    CORS_HEADERS = {
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "600",
+    }
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        origin = request.headers.get("origin", "")
+        if not origin:
+            return await call_next(request)
+
+        # Only inject dynamic CORS for origins NOT already in the static allowlist
+        in_static_list = any(
+            origin.rstrip("/") == o.rstrip("/")
+            for o in (settings.ALLOWED_ORIGINS if isinstance(settings.ALLOWED_ORIGINS, list) else [])
+        )
+        if in_static_list:
+            return await call_next(request)
+
+        if not settings.is_origin_allowed(origin):
+            return await call_next(request)
+
+        # Approved dynamic origin — handle preflight or annotate regular response
+        if request.method == "OPTIONS":
+            response = Response(status_code=204)
+            response.headers["Access-Control-Allow-Origin"] = origin
+            for k, v in self.CORS_HEADERS.items():
+                response.headers[k] = v
+            return response
+
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = origin
+        for k, v in self.CORS_HEADERS.items():
+            if k != "Access-Control-Max-Age":  # Only meaningful on preflight
+                response.headers[k] = v
+        return response
 
 
 @asynccontextmanager
@@ -74,7 +128,13 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS Middleware
+    # Dynamic CORS for Cloudflare Quick Tunnel (*.trycloudflare.com) and other
+    # approved origins not present in the static ALLOWED_ORIGINS list.
+    # Must be added BEFORE the static CORSMiddleware so it can intercept
+    # preflight requests from dynamic origins first.
+    app.add_middleware(DynamicCORSMiddleware)
+
+    # Static CORS Middleware (handles localhost and configured origins)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,

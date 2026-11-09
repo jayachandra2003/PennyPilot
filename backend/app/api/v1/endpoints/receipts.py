@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Depends, File, UploadFile, status
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -21,7 +21,6 @@ from app.domain.receipt_extractor import (
 from app.models.category import Category
 from app.models.user import User
 from app.schemas.receipt import ReceiptExtractResponse, ReceiptLineItem
-from app.services.storage import get_storage_provider, receipt_storage_key
 
 router = APIRouter()
 
@@ -56,23 +55,20 @@ async def extract_receipt_details(
     # 1. Magic bytes & format validation
     ext, mime_type = detect_file_type(content, file.filename)
 
-    # 2. Secure file isolation & persistent storage
-    file_id = uuid.uuid4().hex
-    storage = get_storage_provider()
-    storage_key = receipt_storage_key(current_user.id, file_id, ext)
-    storage.save_file(storage_key, content, mime_type)
+    # 2. Secure file isolation & disk persistence
+    user_receipt_dir = settings.RECEIPT_UPLOAD_DIR / current_user.id
+    user_receipt_dir.mkdir(parents=True, exist_ok=True)
 
-    # Optional local fallback write if local directory available
-    try:
-        user_receipt_dir = settings.RECEIPT_UPLOAD_DIR / current_user.id
-        user_receipt_dir.mkdir(parents=True, exist_ok=True)
-        saved_filename = f"{file_id}{ext}"
-        saved_path = user_receipt_dir / saved_filename
-        if str(saved_path.resolve()).startswith(str(user_receipt_dir.resolve())):
-            with open(saved_path, "wb") as f:
-                f.write(content)
-    except Exception:
-        pass
+    file_id = uuid.uuid4().hex
+    saved_filename = f"{file_id}{ext}"
+    saved_path = user_receipt_dir / saved_filename
+
+    # Prevent path traversal
+    if not str(saved_path.resolve()).startswith(str(user_receipt_dir.resolve())):
+        raise BadRequestException(message="Invalid file path detected.", code="PATH_TRAVERSAL")
+
+    with open(saved_path, "wb") as f:
+        f.write(content)
 
     # 3. Extract text from document / image
     raw_text, extraction_method, warnings = extract_raw_text(content, ext)
@@ -124,32 +120,28 @@ def get_receipt_file(
     Retrieve authenticated user's uploaded receipt file.
     Enforces multi-tenant user isolation and prevents path traversal.
     """
+    # Sanitize file_id to strictly alphanumeric
     if not re.match(r"^[a-fA-F0-9]{32}$", file_id):
         raise BadRequestException(message="Invalid receipt identifier.", code="INVALID_FILE_ID")
 
-    storage = get_storage_provider()
-    for ext in (".png", ".jpg", ".jpeg", ".pdf", ".webp", ".docx"):
-        key = receipt_storage_key(current_user.id, file_id, ext)
-        res = storage.get_file(key)
-        if res is not None:
-            data, mime = res
-            return Response(
-                content=data,
-                media_type=mime,
-                headers={"Content-Disposition": f'inline; filename="{file_id}{ext}"'},
-            )
-
-    # Local filesystem fallback
     user_receipt_dir = settings.RECEIPT_UPLOAD_DIR / current_user.id
-    if user_receipt_dir.is_dir():
-        matched_files = list(user_receipt_dir.glob(f"{file_id}.*"))
-        if matched_files and str(matched_files[0].resolve()).startswith(str(user_receipt_dir.resolve())):
-            return FileResponse(
-                path=matched_files[0],
-                filename=matched_files[0].name,
-            )
+    if not user_receipt_dir.is_dir():
+        raise NotFoundException(message="Receipt file not found.", code="RECEIPT_NOT_FOUND")
 
-    raise NotFoundException(message="Receipt file not found.", code="RECEIPT_NOT_FOUND")
+    # Match file with matching file_id prefix
+    matched_files = list(user_receipt_dir.glob(f"{file_id}.*"))
+    if not matched_files:
+        raise NotFoundException(message="Receipt file not found.", code="RECEIPT_NOT_FOUND")
+
+    target_file = matched_files[0]
+    # Verify path containment
+    if not str(target_file.resolve()).startswith(str(user_receipt_dir.resolve())):
+        raise NotFoundException(message="Receipt file not found.", code="RECEIPT_NOT_FOUND")
+
+    return FileResponse(
+        path=target_file,
+        filename=target_file.name,
+    )
 
 
 @router.delete("/file/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -157,14 +149,9 @@ def delete_receipt_file(
     file_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a user-owned receipt file from persistent storage."""
+    """Delete a user-owned receipt file from disk."""
     if not re.match(r"^[a-fA-F0-9]{32}$", file_id):
         raise BadRequestException(message="Invalid receipt identifier.", code="INVALID_FILE_ID")
-
-    storage = get_storage_provider()
-    for ext in (".png", ".jpg", ".jpeg", ".pdf", ".webp", ".docx"):
-        key = receipt_storage_key(current_user.id, file_id, ext)
-        storage.delete_file(key)
 
     user_receipt_dir = settings.RECEIPT_UPLOAD_DIR / current_user.id
     if user_receipt_dir.is_dir():
